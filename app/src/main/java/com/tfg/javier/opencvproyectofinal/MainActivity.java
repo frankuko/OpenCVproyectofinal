@@ -1,34 +1,21 @@
 package com.tfg.javier.opencvproyectofinal;
 
 import android.app.Activity;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.WindowManager;
 
-import com.tfg.javier.opencvproyectofinal.filtros.BitmapWorkerAsync;
-import com.tfg.javier.opencvproyectofinal.filtros.Funciones;
+import com.tfg.javier.opencvproyectofinal.ProcesoImagenes.Procesador;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.CameraGLSurfaceView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
-import org.opencv.android.Utils;
 import org.opencv.core.Core;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.Size;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
-import org.opencv.utils.Converters;
-
-import java.io.IOException;
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class MainActivity extends Activity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
@@ -38,11 +25,14 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
 
     private CameraBridgeViewBase cameraView;
 
+    Mat mRgba;
+
     private int cam_anchura = 800;
     private int cam_altura = 600;
-    Size tamano;
-    Mat mcopia;
-    List<Mat> mats;
+
+    private int framecount = 0;
+   // Mat fxyMap2;
+    Procesador processor;
 
 
     private BaseLoaderCallback mLoaderCallback =
@@ -54,8 +44,9 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
                             Log.d(TAG, "OpenCV se cargo correctamente");
                             cameraView.setMaxFrameSize(cam_anchura*2 , cam_altura);
                             cameraView.enableView();
-                            Mat mcopia = new Mat();
-                            tamano = new Size(cam_anchura,cam_altura);
+
+                            mRgba = new Mat();
+                            //fxyMap2 = new Mat();
 
                             break;
                         default:
@@ -116,37 +107,59 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
 
     }
 
-    //Funciones f = new Funciones();
-
-    public void loadBitmap(int resId,Mat m){
-        BitmapWorkerAsync bmwrk = new BitmapWorkerAsync(m);
-        bmwrk.execute(resId);
-    }
-
-    //List<Mat> mats;
 
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
-        Mat matriz = inputFrame.rgba();
+        inputFrame.rgba().copyTo(mRgba);
 
 
-        //if(mats == null)
-           /*List<Mat>  */ mats = Arrays.asList(matriz,matriz);
-        /*Size size = new Size(matriz.width(), matriz.height());
 
-        Bitmap b = Bitmap.createBitmap(matriz.width(), matriz.height(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(matriz, b);
-        //f.barrel(b,(float)0.5);
-        Utils.bitmapToMat(b, matriz);*/
+        Mat salida = new Mat();
+
+        Scalar s = new Scalar(0,0,0);
+
+        if (processor == null){
+            int columnas = mRgba.cols();
+            int filas = mRgba.rows();
+            processor = new Procesador();
+            framecount = 0;
+
+
+            processor.barrelDistortion(mRgba,new Point(columnas/2,filas/2),
+                    new Point(columnas*5/16, filas/2), new Point(columnas*11/16, filas/2),0.00000001,0.00000002);
+        }
+
+        framecount +=1;
+
+        if(framecount == 50){
+            System.gc();
+        }
+
+
+
+
+
+        Imgproc.remap(mRgba, salida, Procesador.fxyVertical, Procesador.fxyMap2,
+                Imgproc.INTER_NEAREST, Core.BORDER_TRANSPARENT, s);
+
+        mRgba.release();
+
+
+        return salida;
+
+
+
+
+
+        //pasamos a concatenar la matriz
+/*
+        mats = Arrays.asList(matriz,matriz);
 
         if(mcopia == null){
             mcopia = new Mat();
         }
-
-       // Mat mcopia = new Mat();
-
 
 
 
@@ -159,5 +172,9 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
         Imgproc.resize(mcopia,mcopia,new Size(cam_anchura,cam_altura));
 
         return mcopia;
+*/
+        /*if(salida.channels() == 1)
+            Imgproc.cvtColor(salida,salida,Imgproc.COLOR_GRAY2RGBA);
+        return salida;*/
     }
 }
