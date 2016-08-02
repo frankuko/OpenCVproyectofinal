@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+<manifest
     package="org.opencv"
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:versionCode="3100"
     android:versionName="3.1.0" >
 
     <uses-sdk
         android:minSdkVersion="8"
-        android:targetSdkVersion="21" />
+        android:targetSdkVersion="23" />
 
 </manifest>

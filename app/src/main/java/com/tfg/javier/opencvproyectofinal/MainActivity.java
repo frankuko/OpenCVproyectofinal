@@ -1,9 +1,14 @@
 package com.tfg.javier.opencvproyectofinal;
 
 import android.app.Activity;
+import android.hardware.Camera;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import com.tfg.javier.opencvproyectofinal.ProcesoImagenes.Procesador;
 
@@ -12,9 +17,12 @@ import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
+import org.opencv.core.CvException;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 public class MainActivity extends Activity implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -25,14 +33,43 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
 
     private CameraBridgeViewBase cameraView;
 
-    Mat mRgba;
+    Mat _mRgba;
+    Mat salida;
 
-    private int cam_anchura = 800;
-    private int cam_altura = 600;
+    private int cam_anchura = 320; // 960 x 720
+    private int cam_altura = 240;
+
+    private int cam_anchura_nativa; // 960 x 720
+    private int cam_altura_nativa;
 
     private int framecount = 0;
+    private int counter = 0;
    // Mat fxyMap2;
     Procesador processor;
+
+    private int indiceCamara; // 0 -> camara trasera y 1 -> camara delantera
+
+
+    //valores originales
+    /*private double k1 = 0.000001;
+    private double k2 = 0.0000000001;*/
+
+    //valores para 960x720
+    /*private double k1 = 0.0000001;
+    private double k2 = 0.0000000005;*/
+
+    private double k1 = 2;
+    private double k2 = 1;
+
+    static {
+        if(OpenCVLoader.initDebug()){
+            Log.i(TAG,"OpenCV se cargo bien");
+        }
+        else
+        {
+            Log.i(TAG,"OpenCV crasheo");
+        }
+    }
 
 
     private BaseLoaderCallback mLoaderCallback =
@@ -42,10 +79,10 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
                     switch (status) {
                         case LoaderCallbackInterface.SUCCESS:
                             Log.d(TAG, "OpenCV se cargo correctamente");
-                            cameraView.setMaxFrameSize(cam_anchura*2 , cam_altura);
+                            cameraView.setMaxFrameSize(cam_anchura , cam_altura);
                             cameraView.enableView();
 
-                            mRgba = new Mat();
+
                             //fxyMap2 = new Mat();
 
                             break;
@@ -63,11 +100,31 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        //getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        View decorView = getWindow().getDecorView();
+        int uiOptions = View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+        decorView.setSystemUiVisibility(uiOptions);
+
         setContentView(R.layout.activity_main);
 
         cameraView = (CameraBridgeViewBase) findViewById(R.id.vista_camara);
         cameraView.setCvCameraViewListener(this);
+
+        if(savedInstanceState != null){
+            indiceCamara = savedInstanceState.getInt(STATE_CAMERA_INDEX,0);
+        }
+        else{
+            indiceCamara = 0;
+        }
+
+        cameraView.setCameraIndex(indiceCamara);
 
 
     }
@@ -97,9 +154,79 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        //super.onCreateOptionsMenu(menu);
+        //menu.clear();
+        // MenuInflater inflater = getMenuInflater();
+        getMenuInflater().inflate(R.menu.menu,menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()){
+            case R.id.cambiarCamara:
+                indiceCamara++;
+                if (indiceCamara == Camera.getNumberOfCameras()){
+                    indiceCamara = 0;
+                }
+                recreate();
+                break;
+            case R.id.resolucion_1920x1080:
+                cam_anchura = cam_anchura_nativa;
+                cam_altura = cam_altura_nativa;
+                reiniciarResolucion();
+                break;
+            case R.id.resolucion_800x600:
+                cam_anchura = cam_anchura_nativa/2;
+                cam_altura = cam_altura_nativa/2;
+                reiniciarResolucion();
+                break;
+            case R.id.resolucion_640x480:
+                cam_anchura = cam_anchura_nativa/3;
+                cam_altura = cam_altura_nativa/3;
+                reiniciarResolucion();
+                break;
+            case R.id.resolucion_320x240:
+                cam_anchura = cam_anchura_nativa/4;
+                cam_altura = cam_altura_nativa/4;
+                reiniciarResolucion();
+                break;
+
+        }
+        String msg = "W="+Integer.toString(cam_anchura)+" H="+
+                Integer.toString(cam_altura)+ " Cam ="+
+                Integer.toBinaryString(indiceCamara);
+        Toast.makeText(MainActivity.this,msg,Toast.LENGTH_LONG).show();
+        return true;
+    }
+
+
+    public void reiniciarResolucion(){
+        cameraView.disableView();
+        processor = null;
+        cameraView.setMaxFrameSize(cam_anchura,cam_altura);
+        cameraView.enableView();
+
+    }
+
+    @Override
     public void onCameraViewStarted(int width, int height) {
+
+
+
+        /*cam_altura = height;
+        cam_anchura = width;*/
+
         cam_altura = height;
         cam_anchura = width;
+
+        cam_altura_nativa = cameraView.getHeight();
+        cam_anchura_nativa = cameraView.getWidth();
+
+        _mRgba = new Mat(cam_altura,cam_anchura, CvType.CV_8UC4);
+        salida = new Mat(cam_altura,cam_anchura, CvType.CV_8UC4);
+
     }
 
     @Override
@@ -112,23 +239,25 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
-        inputFrame.rgba().copyTo(mRgba);
 
+        //Mat mRgba = new Mat();
+        inputFrame.rgba().copyTo(_mRgba);
 
-
-        Mat salida = new Mat();
+        //Mat salida = new Mat();
 
         Scalar s = new Scalar(0,0,0);
 
         if (processor == null){
-            int columnas = mRgba.cols();
-            int filas = mRgba.rows();
-            processor = new Procesador();
+            int columnas = _mRgba.cols();
+            int filas = _mRgba.rows();
+            processor = new Procesador(filas,columnas);
             framecount = 0;
 
 
-            processor.barrelDistortion(mRgba,new Point(columnas/2,filas/2),
-                    new Point(columnas*5/16, filas/2), new Point(columnas*11/16, filas/2),0.00000001,0.00000002);
+            processor.barrelDistortion(_mRgba,new Point(columnas/2,filas/2),
+                    new Point(columnas*4/16, filas/2), new Point(columnas*12/16, filas/2),k1,k2);
+
+           // salida = processor.procesaRojos(_mRgba);
         }
 
         framecount +=1;
@@ -138,43 +267,14 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
         }
 
 
+        Imgproc.remap(_mRgba, salida, processor.getMapaX(), processor.getMapaY(),
+                Imgproc.INTER_LINEAR, Core.BORDER_TRANSPARENT, s);
 
-
-
-        Imgproc.remap(mRgba, salida, Procesador.fxyVertical, Procesador.fxyMap2,
-                Imgproc.INTER_NEAREST, Core.BORDER_TRANSPARENT, s);
-
-        mRgba.release();
-
+        if(processor!=null)
+           salida = processor.procesaRojos(salida);
 
         return salida;
 
 
-
-
-
-        //pasamos a concatenar la matriz
-/*
-        mats = Arrays.asList(matriz,matriz);
-
-        if(mcopia == null){
-            mcopia = new Mat();
-        }
-
-
-
-
-
-        Core.hconcat(mats, mcopia);
-        matriz.release();
-
-
-        Imgproc.resize(mcopia,mcopia,new Size(cam_anchura,cam_altura));
-
-        return mcopia;
-*/
-        /*if(salida.channels() == 1)
-            Imgproc.cvtColor(salida,salida,Imgproc.COLOR_GRAY2RGBA);
-        return salida;*/
     }
 }
