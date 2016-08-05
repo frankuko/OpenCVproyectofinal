@@ -9,7 +9,9 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
+import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -18,6 +20,7 @@ import org.opencv.imgproc.Imgproc;
 import java.io.Console;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringTokenizer;
 
 /**
  * Created by javier on 07/06/2016.
@@ -77,11 +80,85 @@ public class Procesador {
         Imgproc.findContours(bordes,contornos,hierarchy,Imgproc.RETR_LIST,Imgproc.CHAIN_APPROX_NONE);
 
         for (int c=0; c<contornos.size();c++){
-            //test de tamaño entre 12 y º10 pixeles
+
             boolean añadido = false;
 
-            Log.println(Log.ERROR,"DEBUGACION contornos:",String.valueOf(contornos.size()));
-            //if(contornos.get(c).size())
+            //Log.println(Log.ERROR,"DEBUG contornos:,String.valueOf(contornos.get(c).size().height));
+            double tamanoContorno = contornos.get(c).size().height;
+
+            //test de tamaño entre 12 y º10 pixeles
+            if((tamanoContorno>=12.0) && (tamanoContorno<=120)){
+
+                //test de area, comprobar area minima
+                 double area = Imgproc.contourArea(contornos.get(c));
+                //Log.println(Log.ERROR,"DEBUG area contorno",String.valueOf(area));
+
+                if((area>=20.0) && (area<=1100)){
+
+                    MatOfPoint2f temp=new MatOfPoint2f();
+                    temp.fromList(contornos.get(c).toList());
+                    RotatedRect elip =Imgproc.fitEllipse(temp);
+
+                    double areaTeorica= 3.1416*elip.size.width*elip.size.height/4.0;
+                    double ratioForma= area/areaTeorica;
+                    //Log.println(Log.ERROR,"areas", String.valueOf(areaTeorica)+" | "+String.valueOf(area));
+                    //Log.println(Log.ERROR,"ratio forma",String.valueOf(ratioForma));
+
+                    //en este test comprobamos si el area teorica
+                    //es similar a la calculada, si hay un porcentaje del 98% continuamos
+                    if(ratioForma>0.98){
+                        //Pasamos al test de color
+                        int cuentaClaros= 0;
+                        double totalPuntos= 0;
+
+                        //cogemos los puntos totales del contorno y tomamos muestras de 3 en 3
+                        for (int k= 0; k<contornos.get(c).size().height; k+= 3) {
+
+                            List<Point> listaPuntos = contornos.get(c).toList();
+                            //Cogemos el punto y lo comparamos con su centro de la elipse
+                            Point ptInt = new Point((listaPuntos.get(k).x+elip.center.x)/2,
+                                    (listaPuntos.get(k).y+elip.center.y)/2);
+
+                            Point ptExt = new Point((listaPuntos.get(k).x*3-elip.center.x)/2,
+                                    (listaPuntos.get(k).y*3-elip.center.y)/2);
+
+
+
+                           // Mat m = ...  // assuming it's of CV_8U type
+
+                            byte buff[] = new byte[(int)lista.get(0).total() * lista.get(0).channels()];
+                            lista.get(0).get(0,0,buff);
+                            int rows = lista.get(0).rows();
+                            int cols = lista.get(0).cols();
+
+                            /*for (int y = 0; y <rows;y++)
+                                for (int x = 0;y<cols;y++){
+                                    buff[y*cols+x] = 1;
+                                }*/
+                            cuentaClaros+= ((buff[(int)ptInt.x+(int)ptInt.y]-20 > buff[(int)ptExt.x+(int)ptExt.y])? 1:0);
+
+                            Log.println(Log.ERROR,"PtInt, x|y",String.valueOf(ptInt.x)+" | "+String.valueOf(ptInt.y));
+                           // buff.
+                            //buff[ptExt][ptExt.y]
+
+
+
+                            //cuentaClaros += lista.get(0).
+                            /*Point ptInt= Point((contornos.get(c).g[i][k].x+elip.center.x)/2,
+                                    (contours[i][k].y+elip.center.y)/2);
+                            Point ptExt= Point((contours[i][k].x*3-elip.center.x)/2,
+                                    (contours[i][k].y*3-elip.center.y)/2);*/
+                            //cuentaClaros+= (canales[0].at<uchar>(ptInt)-20>canales[0].at<uchar>(ptExt)?1:0);
+                           // totalPuntos++;
+
+                        }
+                    }
+
+
+                    //RotatedRect rect = Imgproc.fitEllipse(contornos.get(c));
+                }
+
+            }
 
 
         }
