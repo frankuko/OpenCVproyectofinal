@@ -266,12 +266,13 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
             System.gc();
         }
 
+        if(processor!=null)
+            salida = processor.procesaRojos(salida);
 
         Imgproc.remap(_mRgba, salida, processor.getMapaX(), processor.getMapaY(),
                 Imgproc.INTER_LINEAR, Core.BORDER_TRANSPARENT, s);
 
-        if(processor!=null)
-           salida = processor.procesaRojos(salida);
+
 
         return salida;
 

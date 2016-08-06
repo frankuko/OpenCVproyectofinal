@@ -21,6 +21,7 @@ import java.io.Console;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.util.Vector;
 
 /**
  * Created by javier on 07/06/2016.
@@ -60,6 +61,9 @@ public class Procesador {
 
 
 
+        //Vector de candidatos
+        Vector<RotatedRect> candidatos = new Vector<>();
+
         //Probar a inicializar en el constructor
         List<Mat> lista = new ArrayList<Mat>(4) ;
         Core.split(entrada,lista);
@@ -81,7 +85,7 @@ public class Procesador {
 
         for (int c=0; c<contornos.size();c++){
 
-            boolean añadido = false;
+            boolean anadido = false;
 
             //Log.println(Log.ERROR,"DEBUG contornos:,String.valueOf(contornos.get(c).size().height));
             double tamanoContorno = contornos.get(c).size().height;
@@ -116,33 +120,47 @@ public class Procesador {
 
                             List<Point> listaPuntos = contornos.get(c).toList();
                             //Cogemos el punto y lo comparamos con su centro de la elipse
-                            Point ptInt = new Point((listaPuntos.get(k).x+elip.center.x)/2,
-                                    (listaPuntos.get(k).y+elip.center.y)/2);
+                            Point ptInt = new Point((listaPuntos.get(k).x + elip.center.x) / 2,
+                                    (listaPuntos.get(k).y + elip.center.y) / 2);
 
-                            Point ptExt = new Point((listaPuntos.get(k).x*3-elip.center.x)/2,
-                                    (listaPuntos.get(k).y*3-elip.center.y)/2);
-
-
-
-                           // Mat m = ...  // assuming it's of CV_8U type
-
-                            byte buff[] = new byte[(int)lista.get(0).total() * lista.get(0).channels()];
-                            lista.get(0).get(0,0,buff);
-                            int rows = lista.get(0).rows();
-                            int cols = lista.get(0).cols();
-
-                            /*for (int y = 0; y <rows;y++)
-                                for (int x = 0;y<cols;y++){
-                                    buff[y*cols+x] = 1;
-                                }*/
-                            cuentaClaros+= ((buff[(int)ptInt.x+(int)ptInt.y]-20 > buff[(int)ptExt.x+(int)ptExt.y])? 1:0);
-
-                            Log.println(Log.ERROR,"PtInt, x|y",String.valueOf(ptInt.x)+" | "+String.valueOf(ptInt.y));
-                           // buff.
-                            //buff[ptExt][ptExt.y]
+                            Point ptExt = new Point((listaPuntos.get(k).x * 3 - elip.center.x) / 2,
+                                    (listaPuntos.get(k).y * 3 - elip.center.y) / 2);
 
 
+                            double[] pixelInt = lista.get(0).get((int) ptInt.x, (int) ptInt.y);
+                            double[] pixelExt = lista.get(0).get((int) ptExt.x, (int) ptExt.y);
+                            //double pixelInt = buff[(int)ptInt.x+(int)ptInt.y];
+                            //double pixelExt = buff[(int)ptExt.x+(int)ptExt.y];
+                            if(pixelInt!=null && pixelExt != null) {
+                                cuentaClaros += (pixelInt[0] - 20 > pixelExt[0]) ? 1 : 0;
+                                totalPuntos++;
+                            }
+                            //Log.println(Log.ERROR,"PtInt, x|y",String.valueOf(ptInt.x)+" | "+String.valueOf(ptInt.y));
+                            if(pixelInt!=null && pixelExt != null){
+                                //Log.println(Log.ERROR,"Pixeles, Int|Ext",String.valueOf(pixelInt[0])+" | "+String.valueOf(pixelExt[0]));
 
+
+                            }
+                        }
+                        //Log.println(Log.ERROR,"cuentaClaros, total",String.valueOf(cuentaClaros)+" | "+String.valueOf(totalPuntos));
+                        if(cuentaClaros> 8) {
+
+                            // Test de candidato no incluido en otro
+                            double minDist= 800*600;
+                            for (int o= 0; o<candidatos.size(); o++) {
+
+                                double distancia= Math.abs(elip.center.x-candidatos.get(o).center.x)+Math.abs(elip.center.y-candidatos.get(o).center.y);
+                                if (distancia<minDist)
+                                    minDist = distancia;
+                            }
+                            if (minDist>elip.size.width && minDist>elip.size.height) {
+                                candidatos.add(elip);
+                                anadido= true;
+                                Imgproc.drawContours(entrada, contornos, c, new Scalar(0,0,255), 1);
+
+                                Log.println(Log.ERROR,"C añadido | total cands",String.valueOf(c) + " | "+ String.valueOf(candidatos.size()));
+
+                            }
                             //cuentaClaros += lista.get(0).
                             /*Point ptInt= Point((contornos.get(c).g[i][k].x+elip.center.x)/2,
                                     (contours[i][k].y+elip.center.y)/2);
@@ -160,6 +178,8 @@ public class Procesador {
 
             }
 
+            if(!anadido)
+                Imgproc.drawContours(entrada, contornos, c, new Scalar(255,0,0), 1);
 
         }
 
