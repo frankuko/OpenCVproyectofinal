@@ -118,7 +118,9 @@ public class Procesador {
                         //cogemos los puntos totales del contorno y tomamos muestras de 3 en 3
                         for (int k= 0; k<contornos.get(c).size().height; k+= 3) {
 
+
                             List<Point> listaPuntos = contornos.get(c).toList();
+                            Point[] arrayPuntos = contornos.get(c).toArray();
                             //Cogemos el punto y lo comparamos con su centro de la elipse
                             Point ptInt = new Point((listaPuntos.get(k).x + elip.center.x) / 2,
                                     (listaPuntos.get(k).y + elip.center.y) / 2);
@@ -127,8 +129,11 @@ public class Procesador {
                                     (listaPuntos.get(k).y * 3 - elip.center.y) / 2);
 
 
-                            double[] pixelInt = lista.get(0).get((int) ptInt.x, (int) ptInt.y);
-                            double[] pixelExt = lista.get(0).get((int) ptExt.x, (int) ptExt.y);
+                            Log.println(Log.ERROR,"Pixeles Int, y|x",String.valueOf(ptInt.y)+" | "+String.valueOf(ptInt.x));
+                            Log.println(Log.ERROR,"Mat rows",String.valueOf(lista.get(0).rows()));
+                            Log.println(Log.ERROR,"Mat cols",String.valueOf(lista.get(0).cols()));
+                            double[] pixelInt = lista.get(0).get((int) ptInt.y, (int) ptInt.x);
+                            double[] pixelExt = lista.get(0).get((int) ptExt.y, (int) ptExt.x);
                             //double pixelInt = buff[(int)ptInt.x+(int)ptInt.y];
                             //double pixelExt = buff[(int)ptExt.x+(int)ptExt.y];
                             if(pixelInt!=null && pixelExt != null) {
