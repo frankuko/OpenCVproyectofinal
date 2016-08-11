@@ -19,6 +19,8 @@ import org.opencv.imgproc.Imgproc;
 
 import java.io.Console;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.Vector;
@@ -26,6 +28,7 @@ import java.util.Vector;
 /**
  * Created by javier on 07/06/2016.
  */
+
 public class Procesador {
 
     private Mat red1;
@@ -55,7 +58,120 @@ public class Procesador {
 
     }
 
+    public String devolverColor(Mat imagenEntrada, Point p){
 
+        double[] pixel = imagenEntrada.get((int) p.y, (int) p.x);
+
+        if(pixel[0] >= 130.0 && pixel[1]>= 120.0 && pixel[2]>=100.0){
+            Log.println(Log.ERROR,"Devolviendo blanco",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
+            return "BLANCO";
+        }
+
+        /*if(pixel[0] >= 120.0 && pixel[1]>= 120 && pixel[2]<=120.0){
+            Log.println(Log.ERROR,"Devolviendo amarillo",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
+            return "AMARILLO";
+        }*/
+
+        if (pixel[0] >= 150.0){
+            Log.println(Log.ERROR,"Devolviendo color rojo",String.valueOf(pixel[0]));
+            return "ROJO";
+        }
+        if (pixel[1] >= 150.0){
+            Log.println(Log.ERROR,"Devolviendo color verde",String.valueOf(pixel[1]));
+            return "VERDE";
+        }
+
+        if (pixel[2]>= 120.0){
+            Log.println(Log.ERROR,"Devolviendo color azul",String.valueOf(pixel[2]));
+            return "AZUL";
+        }
+
+
+
+        Log.println(Log.ERROR,"Devolviendo sin color",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
+        return "SIN COLOR";
+
+
+    }
+
+    /*public String devolverColor(Mat imagenEntrada, Point p){
+
+        double[] pixel = imagenEntrada.get((int) p.y, (int) p.x);
+
+        if(pixel[0] >= 130.0 && pixel[1]>= 120.0 && pixel[2]>=120.0){
+            Log.println(Log.ERROR,"Devolviendo blanco",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
+            return "BLANCO";
+        }
+
+        if (pixel[0] >= 170.0){
+            Log.println(Log.ERROR,"Devolviendo color rojo",String.valueOf(pixel[0]));
+            return "ROJO";
+        }
+        if (pixel[1] >= 170.0){
+            Log.println(Log.ERROR,"Devolviendo color verde",String.valueOf(pixel[1]));
+            return "VERDE";
+        }
+
+        if(pixel[2] >= 170.0){
+            Log.println(Log.ERROR,"Devolviendo color azul",String.valueOf(pixel[2]));
+            return "AZUL";
+        }
+        Log.println(Log.ERROR,"Devolviendo sin color",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
+        return "SIN COLOR";
+
+
+    }*/
+
+    public void ordenarColores(Mat imagen, Vector<RotatedRect> vector){
+
+        RotatedRect temp0 = new RotatedRect();
+        RotatedRect temp1 = new RotatedRect();
+        RotatedRect temp2 = new RotatedRect();
+        RotatedRect temp3 = new RotatedRect();
+
+        for(int i=0;i<vector.size();i++){
+            String color = devolverColor(imagen,vector.get(i).center);
+            switch (color){
+                case "BLANCO":
+                    temp0=vector.get(i);
+                    break;
+                case "ROJO":
+                    temp1=vector.get(i);
+                    break;
+                case "VERDE":
+                    temp2=vector.get(i);
+                    break;
+                case "AZUL":
+                    temp3=vector.get(i);
+                    break;
+            }
+
+        }
+
+        vector.set(0,temp0);
+        vector.set(1,temp1);
+        vector.set(2,temp2);
+        vector.set(3,temp3);
+
+        //return vector;
+        //return null;
+    }
+
+
+
+    public Mat procesaGris(Mat entrada){
+        List<Mat> lista = new ArrayList<Mat>(4) ;
+        Core.split(entrada,lista);
+        Mat maximo = new Mat();
+
+        //lista.get(0).copyTo(maximo);
+        Core.max(lista.get(0),lista.get(1),maximo);
+        Core.max(maximo,lista.get(2),maximo);
+        //for(int i=1;i<lista.size()-1;i++)
+
+
+        return maximo;
+    }
 
     public Mat procesaRojos(Mat entrada) {
 
@@ -67,15 +183,17 @@ public class Procesador {
         //Probar a inicializar en el constructor
         List<Mat> lista = new ArrayList<Mat>(4) ;
         Core.split(entrada,lista);
+        Mat maximo = new Mat();
 
 
-        Core.max(lista.get(0),lista.get(1),lista.get(0));
-        Core.max(lista.get(0),lista.get(2),lista.get(0)); //en lista de 0 tenemos el maximo de los 3 colores GRISES
+        Core.max(lista.get(0),lista.get(1),maximo);
+        Core.max(maximo,lista.get(2),maximo); //en lista de 0 tenemos el maximo de los 3 colores GRISES
+
 
 
 // 3. Aplicar el detector de Canny, bajando umbral hasta tener suficientes bordes
         for(int umbral=500;umbral>200;umbral-=100){
-            Imgproc.Canny(lista.get(0),bordes,200,400,3,true);
+            Imgproc.Canny(maximo,bordes,200,400,3,true);
             if(Core.norm(bordes, Core.NORM_L1)/255>400)
                 break;
         }
@@ -97,14 +215,14 @@ public class Procesador {
                  double area = Imgproc.contourArea(contornos.get(c));
                 //Log.println(Log.ERROR,"DEBUG area contorno",String.valueOf(area));
 
-                if((area>=20.0) && (area<=1100)){
+                if((area>=100.0) && (area<=1100)){
 
                     MatOfPoint2f temp=new MatOfPoint2f();
                     temp.fromList(contornos.get(c).toList());
                     RotatedRect elip =Imgproc.fitEllipse(temp);
 
                     double areaTeorica= 3.1416*elip.size.width*elip.size.height/4.0;
-                    double ratioForma= area/areaTeorica;
+                    double ratioForma= area+4/areaTeorica;
                     //Log.println(Log.ERROR,"areas", String.valueOf(areaTeorica)+" | "+String.valueOf(area));
                     //Log.println(Log.ERROR,"ratio forma",String.valueOf(ratioForma));
 
@@ -120,7 +238,7 @@ public class Procesador {
 
 
                             List<Point> listaPuntos = contornos.get(c).toList();
-                            Point[] arrayPuntos = contornos.get(c).toArray();
+                            //Point[] arrayPuntos = contornos.get(c).toArray();
                             //Cogemos el punto y lo comparamos con su centro de la elipse
                             Point ptInt = new Point((listaPuntos.get(k).x + elip.center.x) / 2,
                                     (listaPuntos.get(k).y + elip.center.y) / 2);
@@ -129,28 +247,27 @@ public class Procesador {
                                     (listaPuntos.get(k).y * 3 - elip.center.y) / 2);
 
 
-                            Log.println(Log.ERROR,"Pixeles Int, y|x",String.valueOf(ptInt.y)+" | "+String.valueOf(ptInt.x));
-                            Log.println(Log.ERROR,"Mat rows",String.valueOf(lista.get(0).rows()));
-                            Log.println(Log.ERROR,"Mat cols",String.valueOf(lista.get(0).cols()));
-                            double[] pixelInt = lista.get(0).get((int) ptInt.y, (int) ptInt.x);
-                            double[] pixelExt = lista.get(0).get((int) ptExt.y, (int) ptExt.x);
+                           // Log.println(Log.ERROR,"Pixeles Int, y|x",String.valueOf(ptInt.y)+" | "+String.valueOf(ptInt.x));
+                            //Log.println(Log.ERROR,"Mat rows",String.valueOf(lista.get(0).rows()));
+                            //Log.println(Log.ERROR,"Mat cols",String.valueOf(lista.get(0).cols()));
+
+
+                            double[] pixelInt = maximo.get((int) ptInt.y, (int) ptInt.x);
+                            double[] pixelExt = maximo.get((int) ptExt.y, (int) ptExt.x);
+
                             //double pixelInt = buff[(int)ptInt.x+(int)ptInt.y];
                             //double pixelExt = buff[(int)ptExt.x+(int)ptExt.y];
                             if(pixelInt!=null && pixelExt != null) {
-                                cuentaClaros += (pixelInt[0] - 20 > pixelExt[0]) ? 1 : 0;
+                                cuentaClaros += (pixelInt[0] - 40 > pixelExt[0]) ? 1 : 0;
                                 totalPuntos++;
                             }
                             //Log.println(Log.ERROR,"PtInt, x|y",String.valueOf(ptInt.x)+" | "+String.valueOf(ptInt.y));
-                            if(pixelInt!=null && pixelExt != null){
-                                //Log.println(Log.ERROR,"Pixeles, Int|Ext",String.valueOf(pixelInt[0])+" | "+String.valueOf(pixelExt[0]));
 
-
-                            }
                         }
-                        //Log.println(Log.ERROR,"cuentaClaros, total",String.valueOf(cuentaClaros)+" | "+String.valueOf(totalPuntos));
-                        if(cuentaClaros> 8) {
+                        Log.println(Log.ERROR,"cuentaClaros, total",String.valueOf(cuentaClaros)+" | "+String.valueOf(totalPuntos));
+                        if(cuentaClaros/totalPuntos> 0.90) {
 
-                            // Test de candidato no incluido en otro
+                            // Test de candidato no incluido en otro, para comprobar que el candidato no esta dentro de otro candidato
                             double minDist= 800*600;
                             for (int o= 0; o<candidatos.size(); o++) {
 
@@ -159,20 +276,17 @@ public class Procesador {
                                     minDist = distancia;
                             }
                             if (minDist>elip.size.width && minDist>elip.size.height) {
-                                candidatos.add(elip);
-                                anadido= true;
-                                Imgproc.drawContours(entrada, contornos, c, new Scalar(0,0,255), 1);
 
-                                Log.println(Log.ERROR,"C añadido | total cands",String.valueOf(c) + " | "+ String.valueOf(candidatos.size()));
+                                if(elip.boundingRect().area()>50){
+                                    candidatos.add(elip);
+                                    anadido= true;
+                                    Imgproc.drawContours(entrada, contornos, c, new Scalar(255,0,0), 1);
+                                    Log.println(Log.ERROR,"C añadido | total cands",String.valueOf(c) + " | "+ String.valueOf(candidatos.size()));
+                                }
+
 
                             }
-                            //cuentaClaros += lista.get(0).
-                            /*Point ptInt= Point((contornos.get(c).g[i][k].x+elip.center.x)/2,
-                                    (contours[i][k].y+elip.center.y)/2);
-                            Point ptExt= Point((contours[i][k].x*3-elip.center.x)/2,
-                                    (contours[i][k].y*3-elip.center.y)/2);*/
-                            //cuentaClaros+= (canales[0].at<uchar>(ptInt)-20>canales[0].at<uchar>(ptExt)?1:0);
-                           // totalPuntos++;
+
 
                         }
                     }
@@ -183,9 +297,59 @@ public class Procesador {
 
             }
 
-            if(!anadido)
-                Imgproc.drawContours(entrada, contornos, c, new Scalar(255,0,0), 1);
+            /*if(!anadido)
+                Imgproc.drawContours(entrada, contornos, c, new Scalar(255,0,0), 1);*/
 
+        }
+
+        if(!candidatos.isEmpty() && candidatos.size()>=4){
+            //reducimos a los candidatos circulares
+            //debemos reducir el número a los 4 candidatos más grandes
+            Iterator<RotatedRect> it = candidatos.iterator();
+            double minTamano = 1000.0;
+            double tam0 = 0.0;
+            double tam1 = 0.0;
+            double tam2 = 0.0;
+            double tam3 = 0.0;
+
+            while (it.hasNext()){
+                RotatedRect v = it.next();
+                if(v.angle>10 && v.angle<165)
+                    it.remove();
+                else if(candidatos.size()>4) {
+
+                        if(v.size.area()>tam0)
+                            tam0=v.size.area();
+                        else
+                            if(v.size.area()>tam1)
+                                tam1=v.size.area();
+                            else
+                                if(v.size.area()>tam2)
+                                    tam2 = v.size.area();
+                                else
+                                    if(v.size.area()>tam3)
+                                        tam3 = v.size.area();
+                                    else
+                                        it.remove();
+                      }
+
+
+
+            }
+            Log.println(Log.ERROR,"Candidatos",String.valueOf(candidatos.size()));
+        }
+
+        if (!candidatos.isEmpty() && candidatos.size()==4){
+
+            Vector<RotatedRect> puntosCentro = new Vector<RotatedRect>();
+            ordenarColores(entrada,candidatos);
+
+
+            if(!candidatos.isEmpty() && candidatos.size()==4)
+               // if(!candidatos.contains(new RotatedRect()))
+                    for (int j=0; j<candidatos.size(); ++j){
+                        Imgproc.line(entrada, candidatos.get(j).center, candidatos.get((j+1)%candidatos.size()).center, new Scalar(255,255,255));
+                    }
         }
 
         return entrada;

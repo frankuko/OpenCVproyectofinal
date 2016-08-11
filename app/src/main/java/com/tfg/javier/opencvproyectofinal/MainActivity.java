@@ -36,10 +36,10 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
     Mat _mRgba;
     Mat salida;
 
-    private int cam_anchura = 320; // 960 x 720
-    private int cam_altura = 240;
+    private int cam_anchura = 960; // 960 x 720
+    private int cam_altura = 720;
 
-    private int cam_anchura_nativa; // 960 x 720
+    private int cam_anchura_nativa; // 320 x 240
     private int cam_altura_nativa;
 
     private int framecount = 0;
@@ -267,10 +267,10 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
         }
 
         if(processor!=null)
-            salida = processor.procesaRojos(salida);
+            salida = processor.procesaRojos(_mRgba);
 
-        Imgproc.remap(_mRgba, salida, processor.getMapaX(), processor.getMapaY(),
-                Imgproc.INTER_LINEAR, Core.BORDER_TRANSPARENT, s);
+        /*Imgproc.remap(_mRgba, salida, processor.getMapaX(), processor.getMapaY(),
+                Imgproc.INTER_LINEAR, Core.BORDER_TRANSPARENT, s);*/
 
 
 
