@@ -36,8 +36,8 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
     Mat _mRgba;
     Mat salida;
 
-    private int cam_anchura = 960; // 960 x 720
-    private int cam_altura = 720;
+    private int cam_anchura = 800; // 960 x 720
+    private int cam_altura = 600;
 
     private int cam_anchura_nativa; // 320 x 240
     private int cam_altura_nativa;
@@ -165,13 +165,13 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()){
-            case R.id.cambiarCamara:
+            /*case R.id.cambiarCamara:
                 indiceCamara++;
                 if (indiceCamara == Camera.getNumberOfCameras()){
                     indiceCamara = 0;
                 }
                 recreate();
-                break;
+                break;*/
             case R.id.resolucion_1920x1080:
                 cam_anchura = cam_anchura_nativa;
                 cam_altura = cam_altura_nativa;
