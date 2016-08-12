@@ -23,6 +23,7 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.utils.Converters;
 
 import java.io.Console;
+import java.nio.DoubleBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -118,6 +119,8 @@ public class Procesador {
         Mat crop = new Mat(imagenEntrada,Imgproc.boundingRect(p));
         Mat mask = Mat.zeros(crop.rows(),crop.cols(),CvType.CV_8UC1);
 
+        //Imgproc.cvtColor(crop,crop,Imgproc.COLOR_RGB2Lab);
+
 
         Point topLeft = Imgproc.boundingRect(p).tl();
         Point minusTopLeft = new Point(-topLeft.x,-topLeft.y);
@@ -126,40 +129,123 @@ public class Procesador {
         lista.add(p);
 
         Mat dest = new Mat();
-        //Imgproc.dr
+
         Imgproc.drawContours(mask,lista,-1,new Scalar(255),Core.FILLED,Imgproc.LINE_AA,dest,1,minusTopLeft);
 
         Scalar media = Core.mean(crop,mask);
 
 
-        //Imgproc.boundingRect(p).tl()
-
-        /*for (int k= 0; k<p.size().height; k+= 3) {
 
 
-            List<Point> listaPuntos = p.toList();
-
-            //Cogemos el punto y lo comparamos con su centro de la elipse
-            Point ptInt = new Point((listaPuntos.get(k).x + elip.center.x) / 2,
-                    (listaPuntos.get(k).y + elip.center.y) / 2);
-
-        }*/
         Log.println(Log.ERROR,"Devolviendo media",String.valueOf(media));
+
+
+
+
+
 
 
         double[] pixel = media.val;//imagenEntrada.get((int) p.y, (int) p.x);
 
-        if(pixel[0] >= 170.0 && pixel[1]>= 90.0 && pixel[2]>=100.0){
+        //r = pixel[0]
+        //g = pixel[1]
+        //b = pixel[2]
+
+        List<Double> listaDiferencias = new ArrayList<Double>();
+
+
+        //Colores en escalar BGR
+        int rojo = ColorUtil.argb(255,0,0);
+        int verde = ColorUtil.argb(0,255,0);
+        int azul = ColorUtil.argb(0,0,255);
+        int blanco = ColorUtil.argb(255,255,255);
+
+        int colorMedio = ColorUtil.argb((int)pixel[0],(int)pixel[1],(int)pixel[2],(int)pixel[3]);
+        /*Scalar rojo = new Scalar(0,0,255,255);
+        Scalar verde = new Scalar(0,255,0,255);
+        Scalar azul = new Scalar(255,0,0);
+        Scalar blanco = new Scalar(255,255,255,255);*/
+
+
+
+
+        double diffRojo = 0.0;
+        double diffVerde = 0.0;
+        double diffAzul = 0.0;
+        double diffBlanco = 0.0;
+
+
+
+
+        diffRojo = ColorUtil.getColorDifference(media,rojo);
+        diffVerde = ColorUtil.getColorDifference(media,verde);
+        diffAzul = ColorUtil.getColorDifference(media, azul);
+        diffBlanco = ColorUtil.getColorDifference(media,blanco);
+
+        listaDiferencias.add(diffRojo);
+        listaDiferencias.add(diffVerde);
+        listaDiferencias.add(diffAzul);
+        listaDiferencias.add(diffBlanco);
+
+        double minDistancia = Double.MAX_VALUE ;
+
+        for (double d: listaDiferencias) {
+            if(minDistancia>d)
+                minDistancia=d;
+        }
+
+        if (minDistancia == diffBlanco){
             Log.println(Log.ERROR,"Devolviendo blanco",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
             return "BLANCO";
         }
 
-
-        if (pixel[0] >= 170.0){
+        if(minDistancia == diffRojo){
             Log.println(Log.ERROR,"Devolviendo color rojo",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
             return "ROJO";
         }
-        if (pixel[1] >= 150.0){
+        if(minDistancia == diffVerde){
+            Log.println(Log.ERROR,"Devolviendo color verde",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
+            return "VERDE";
+        }
+
+        if(minDistancia == diffAzul){
+            Log.println(Log.ERROR,"Devolviendo color azul",String.valueOf(pixel[2]));
+            return "AZUL";
+        }
+
+
+
+
+
+
+
+
+        /*if(pixel[0] >= 130.0 && pixel[1]>= 100.0 && pixel[2]>=95.0){
+            Log.println(Log.ERROR,"Devolviendo blanco",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
+            return "BLANCO";
+        }*/
+
+
+
+        /*if (pixel[0] > pixel[1] && pixel[0] > pixel[2]){
+            Log.println(Log.ERROR,"Devolviendo color rojo",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
+            return "ROJO";
+        }
+        if (pixel[1] > pixel[0] && pixel[1] > pixel[2]){
+            Log.println(Log.ERROR,"Devolviendo color verde",String.valueOf(pixel[1]));
+            return "VERDE";
+        }
+
+        if (pixel[2] > pixel[1] && pixel[2] > pixel[0]){
+            Log.println(Log.ERROR,"Devolviendo color azul",String.valueOf(pixel[2]));
+            return "AZUL";
+        }*/
+
+        /*if (pixel[0] >= 180.0){
+            Log.println(Log.ERROR,"Devolviendo color rojo",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
+            return "ROJO";
+        }
+        if (pixel[1] >= 110.0){
             Log.println(Log.ERROR,"Devolviendo color verde",String.valueOf(pixel[1]));
             return "VERDE";
         }
@@ -167,7 +253,7 @@ public class Procesador {
         if (pixel[2]>= 120.0){
             Log.println(Log.ERROR,"Devolviendo color azul",String.valueOf(pixel[2]));
             return "AZUL";
-        }
+        }*/
 
 
 
@@ -378,7 +464,7 @@ public class Procesador {
 
                         }
                         Log.println(Log.ERROR,"cuentaClaros, total",String.valueOf(cuentaClaros)+" | "+String.valueOf(totalPuntos));
-                        if(cuentaClaros/totalPuntos> 0.85) {
+                        if(cuentaClaros/totalPuntos> 0.95) {
 
                             // Test de candidato no incluido en otro, para comprobar que el candidato no esta dentro de otro candidato
                             double minDist= 800*600;
@@ -400,7 +486,7 @@ public class Procesador {
                                     //contornosFinales.add(contornos.get(c));
 
                                     anadido= true;
-                                    Imgproc.drawContours(entrada, contornos, c, new Scalar(255,0,0), 1);
+                                    //Imgproc.drawContours(entrada, contornos, c, new Scalar(255,0,0), 1);
                                     Log.println(Log.ERROR,"C añadido | total cands",String.valueOf(c) + " | "+ String.valueOf(candidatos.size()));
 
 
@@ -426,7 +512,7 @@ public class Procesador {
             //reducimos a los candidatos circulares
             //debemos reducir el número a los 4 candidatos más grandes
             Iterator<Pair<RotatedRect,MatOfPoint>> it = listaContornos.iterator();
-            //double minTamano = 100000.0;
+            //double minTamano = Integer.MAX_VALUE;;
             double tam0 = 0.0;
             double tam1 = 0.0;
             double tam2 = 0.0;
@@ -520,6 +606,9 @@ public class Procesador {
                     double fontScale = 200;
                     Scalar color = new Scalar(fontScale);
                     Point p = new Point(300,300);
+
+                    for (int k = 0; k<puntosContorno.size();k++)
+                        Imgproc.drawContours(entrada, puntosContorno,k , new Scalar(255,0,0), 1);
                     for (int j=0; j<rectContorno.size(); ++j){
                         Imgproc.line(entrada, rectContorno.get(j).center, rectContorno.get((j+1)%rectContorno.size()).center, new Scalar(255,255,255));
                     }
