@@ -114,6 +114,123 @@ public class Procesador {
 
     }
 
+    public List<Pair<RotatedRect,MatOfPoint>> ordernaEsquinas(List<Pair<RotatedRect,MatOfPoint>> listaContornos){
+
+        //Todos los contornos que forman parte de los rotatedrect, cada mat of point es un contorno
+        List<MatOfPoint> puntosContorno = new ArrayList<MatOfPoint>();
+        //Los 4 objetos rotated red
+        List<RotatedRect> rectContorno = new ArrayList<RotatedRect>();
+
+        //Sacamos de la lista los contornos(MatofPoint) y los RotatedRect
+        for (Pair<RotatedRect,MatOfPoint> pair: listaContornos) {
+            rectContorno.add(pair.getLeft());
+            puntosContorno.add(pair.getRight());
+        }
+
+        Point centerRect = new Point();
+
+        //Obtener el punto central del contorno
+        for (int j = 0; j < rectContorno.size(); j++)
+        {
+
+            centerRect.x += rectContorno.get(j).center.x;
+            centerRect.y += rectContorno.get(j).center.y;
+        }
+        double inv = 1.0 / rectContorno.size();
+        centerRect.x = centerRect.x * inv;
+        centerRect.y = centerRect.y * inv;
+
+
+
+        Vector<Point> top = new Vector<Point>();
+        Vector<Point> bot = new Vector<Point>();
+
+        //puntos cogidos de la parte izquierda, getLeft
+        MatOfPoint2f puntosCentrales2f = new MatOfPoint2f(listaContornos.get(0).getLeft().center,listaContornos.get(1).getLeft().center,
+                listaContornos.get(2).getLeft().center,listaContornos.get(3).getLeft().center);
+
+        List<Point> listaPuntos = puntosCentrales2f.toList();
+        List<Pair<RotatedRect,MatOfPoint>> result = new ArrayList<Pair<RotatedRect,MatOfPoint>>();;
+
+
+
+        List<Pair<RotatedRect,MatOfPoint>> resultTop = new ArrayList<Pair<RotatedRect,MatOfPoint>>();
+        List<Pair<RotatedRect,MatOfPoint>> resultBot = new ArrayList<Pair<RotatedRect,MatOfPoint>>();
+
+        for (int i = 0; i < listaPuntos.size(); i++)
+        {
+            if (listaPuntos.get(i).y < centerRect.y)
+                resultTop.add(listaContornos.get(i));
+            else
+                resultBot.add(listaContornos.get(i));
+
+        }
+
+        //Comprueba que en la lista de vectores de top hay 2 puntos y en la lista de bot hay 2
+        if (resultTop.size() == 2 && resultBot.size() == 2){
+            //corners.release();
+
+            Pair<RotatedRect,MatOfPoint> tl =
+                    resultTop.get(0).getLeft().center.x > resultTop.get(1).getLeft().center.x ? resultTop.get(1) : resultTop.get(0);
+            Pair<RotatedRect,MatOfPoint> tr =
+                    resultTop.get(0).getLeft().center.x > resultTop.get(1).getLeft().center.x ? resultTop.get(0) : resultTop.get(1);
+
+            Pair<RotatedRect,MatOfPoint> bl =
+                    resultBot.get(0).getLeft().center.x > resultBot.get(1).getLeft().center.x ? resultBot.get(1) : resultBot.get(0);
+            Pair<RotatedRect,MatOfPoint> br =
+                    resultBot.get(0).getLeft().center.x > resultBot.get(1).getLeft().center.x ? resultBot.get(0) : resultBot.get(1);
+
+
+            result.add(0,tl);
+            result.add(1,tr);
+            result.add(2,br);
+            result.add(3,bl);
+            /*corners.push_back(tl);
+            corners.push_back(tr);
+            corners.push_back(br);
+            corners.push_back(bl);*/
+
+        }
+
+        return result;
+
+    }
+
+    public MatOfPoint2f ordernaEsquinas(MatOfPoint2f corners,Point centro){
+
+        Vector<Point> top = new Vector<Point>();
+        Vector<Point> bot = new Vector<Point>();
+        List<Point> listaPuntos = corners.toList();
+        MatOfPoint2f result = new MatOfPoint2f();
+        for (int i = 0; i < corners.size().height; i++)
+        {
+            if (listaPuntos.get(i).y < centro.y)
+                top.add(listaPuntos.get(i));
+            else
+                bot.add(listaPuntos.get(i));
+
+        }
+
+        //Comprueba que en la lista de vectores de top hay 2 puntos y en la lista de bot hay 2
+        if (top.size() == 2 && bot.size() == 2){
+            //corners.release();
+
+            Point tl = top.get(0).x > top.get(1).x ? top.get(1) : top.get(0);
+            Point tr = top.get(0).x > top.get(1).x ? top.get(0) : top.get(1);
+            Point bl = bot.get(0).x > bot.get(1).x ? bot.get(1) : bot.get(0);
+            Point br = bot.get(0).x > bot.get(1).x ? bot.get(0) : bot.get(1);
+            result = new MatOfPoint2f(tl,tr,br,bl);
+            /*corners.push_back(tl);
+            corners.push_back(tr);
+            corners.push_back(br);
+            corners.push_back(bl);*/
+
+        }
+        //Imgproc.getAffineTransform(corners,corners);
+        return result;
+
+    }
+
     public String devolverColor(Mat imagenEntrada, MatOfPoint p){
 
         Mat crop = new Mat(imagenEntrada,Imgproc.boundingRect(p));
@@ -312,48 +429,6 @@ public class Procesador {
 
     }
 
-    /*public String ordenarColores(Mat imagen, Vector<RotatedRect> vector){
-
-        RotatedRect temp0 = new RotatedRect();
-        RotatedRect temp1 = new RotatedRect();
-        RotatedRect temp2 = new RotatedRect();
-        RotatedRect temp3 = new RotatedRect();
-
-        //Core.mean(vector.get(i))
-        String resultado = "";
-
-        for(int i=0;i<vector.size();i++){
-            //Core.mean(vector.get(i));
-            String color = devolverColor(imagen,vector.get(i));
-            resultado+=color+" | ";
-            switch (color){
-                case "BLANCO":
-                    temp0=vector.get(i);
-                    break;
-                case "ROJO":
-                    temp1=vector.get(i);
-                    break;
-                case "VERDE":
-                    temp2=vector.get(i);
-                    break;
-                case "AZUL":
-                    temp3=vector.get(i);
-                    break;
-            }
-
-        }
-
-        vector.set(0,temp0);
-        vector.set(1,temp1);
-        vector.set(2,temp2);
-        vector.set(3,temp3);
-
-        //return vector;
-        //return null;
-        return resultado;
-
-
-    }*/
 
 
 
@@ -446,9 +521,6 @@ public class Procesador {
                                     (listaPuntos.get(k).y * 3 - elip.center.y) / 2);
 
 
-                           // Log.println(Log.ERROR,"Pixeles Int, y|x",String.valueOf(ptInt.y)+" | "+String.valueOf(ptInt.x));
-                            //Log.println(Log.ERROR,"Mat rows",String.valueOf(lista.get(0).rows()));
-                            //Log.println(Log.ERROR,"Mat cols",String.valueOf(lista.get(0).cols()));
 
 
                             double[] pixelInt = maximo.get((int) ptInt.y, (int) ptInt.x);
@@ -498,13 +570,10 @@ public class Procesador {
                     }
 
 
-                    //RotatedRect rect = Imgproc.fitEllipse(contornos.get(c));
                 }
 
             }
 
-            /*if(!anadido)
-                Imgproc.drawContours(entrada, contornos, c, new Scalar(255,0,0), 1);*/
 
         }
 
@@ -572,50 +641,77 @@ public class Procesador {
 
         if (!listaContornos.isEmpty() && listaContornos.size()==4){
 
+            //Todos los contornos que forman parte de los rotatedrect, cada mat of point es un contorno
             List<MatOfPoint> puntosContorno = new ArrayList<MatOfPoint>();
+            //Los 4 objetos rotated red
             List<RotatedRect> rectContorno = new ArrayList<RotatedRect>();
 
+
+
+
+
+            //puntosCentrales2f = ordernaEsquinas(puntosCentrales2f,centerRect);
+            listaContornos = ordernaEsquinas(listaContornos);
+
+
+            //TODO IMPORTANTE CAMBIAR ORDENARCOLORES DESPUES DE ORDENAR LAS ESQUINAS
+
+
+            //Sacamos de la lista los contornos(MatofPoint) y los RotatedRect
             for (Pair<RotatedRect,MatOfPoint> pair: listaContornos) {
                 rectContorno.add(pair.getLeft());
                 puntosContorno.add(pair.getRight());
             }
 
-           String res = ordenarColores(entrada,puntosContorno);
-
-
-            /*if(!candidatos.isEmpty() && candidatos.size()==4)
-                if(!candidatos.contains(new RotatedRect()))
-                    for (int j=0; j<candidatos.size(); ++j){
-                        Imgproc.line(entrada, candidatos.get(j).center, candidatos.get((j+1)%candidatos.size()).center, new Scalar(255,255,255));
-                    }*/
+            //Llamamos a ordenar los colores, que nos devolverá que color es cada marcador
+            String res = ordenarColores(entrada,puntosContorno);
 
             if(!rectContorno.isEmpty() && rectContorno.size()==4){
-                //if(!rectContorno.contains(new RotatedRect())){
+
+                //Extraemos los puntos centrales de los contornos y comprobamos si son convexos
+                MatOfPoint2f puntosCentrales2f = new MatOfPoint2f(rectContorno.get(0).center,rectContorno.get(1).center,
+                        rectContorno.get(2).center,rectContorno.get(3).center);
+
+                MatOfPoint puntosCentrales = new MatOfPoint(rectContorno.get(0).center,rectContorno.get(1).center,
+                        rectContorno.get(2).center,rectContorno.get(3).center);
+
+                //Ordenamos los puntos centrales
+
+
+                if(Imgproc.isContourConvex(puntosCentrales)) {
+
+
+
+                    String res2 = ordenarColores(entrada,puntosContorno);
+
+
                     Mat rvec = new Mat();
                     Mat tvec = new Mat();
 
-                    List<Point> r = new ArrayList<Point>();
-                    for(int y=0; y<rectContorno.size();y++){
+                    /*List<Point> r = new ArrayList<Point>();
+                    for (int y = 0; y < rectContorno.size(); y++) {
 
                         r.add(rectContorno.get(y).center);
 
                     }
-                    MatOfPoint2f temp=new MatOfPoint2f();
-                    temp.fromList(r);
+                    MatOfPoint2f temp = new MatOfPoint2f();
+                    temp.fromList(r);*/
 
                     double fontScale = 200;
                     Scalar color = new Scalar(fontScale);
-                    Point p = new Point(300,300);
+                    Point p = new Point(300, 300);
 
-                    for (int k = 0; k<puntosContorno.size();k++)
-                        Imgproc.drawContours(entrada, puntosContorno,k , new Scalar(255,0,0), 1);
-                    for (int j=0; j<rectContorno.size(); ++j){
-                        Imgproc.line(entrada, rectContorno.get(j).center, rectContorno.get((j+1)%rectContorno.size()).center, new Scalar(255,255,255));
+                    for (int k = 0; k < puntosContorno.size(); k++)
+                        Imgproc.drawContours(entrada, puntosContorno, k, new Scalar(255, 0, 0), 1);
+                    for (int j = 0; j < rectContorno.size(); ++j) {
+                        Imgproc.line(entrada, rectContorno.get(j).center, rectContorno.get((j + 1) % rectContorno.size()).center, new Scalar(255, 255, 255));
                     }
-                    Imgproc.putText(entrada,res,p,Core.FONT_HERSHEY_PLAIN,1,color,1);
+                    Imgproc.putText(entrada, res, p, Core.FONT_HERSHEY_PLAIN, 1, color, 1);
 
-                    //Calib3d.solvePnP(marcadores,temp,K,calibracion,rvec,tvec);
+                    //Calib3d.solvePnP(marcadores, puntosCentrales2f, K, calibracion, rvec, tvec);
                 }
+
+            }
 
         }
 
