@@ -61,6 +61,8 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
     private double k1 = 2;
     private double k2 = 1;
 
+    private boolean modoAlternativo = false;
+
     static {
         if(OpenCVLoader.initDebug()){
             Log.i(TAG,"OpenCV se cargo bien");
@@ -172,6 +174,14 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
                 }
                 recreate();
                 break;*/
+            case R.id.modo_normal:
+                modoAlternativo=false;
+                reiniciarResolucion();
+                break;
+            case R.id.modo_alternativo:
+                modoAlternativo=true;
+                reiniciarResolucion();
+                break;
             case R.id.resolucion_1920x1080:
                 cam_anchura = cam_anchura_nativa;
                 cam_altura = cam_altura_nativa;
@@ -263,7 +273,7 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
 
         if(processor!=null){
 
-            Mat intermedio = processor.procesarImagen(_mRgba);
+            Mat intermedio = processor.procesarImagen(_mRgba,modoAlternativo);
             Imgproc.remap(intermedio, salida, processor.getMapaX(), processor.getMapaY(),
                     Imgproc.INTER_LINEAR, Core.BORDER_TRANSPARENT, s);
         }

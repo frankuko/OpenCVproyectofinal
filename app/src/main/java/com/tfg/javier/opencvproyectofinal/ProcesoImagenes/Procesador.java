@@ -25,6 +25,7 @@ import org.opencv.utils.Converters;
 import org.opencv.video.Video;
 
 import java.io.Console;
+import java.io.PipedOutputStream;
 import java.nio.DoubleBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -231,14 +232,110 @@ public class Procesador {
             Point bl = bot.get(0).x > bot.get(1).x ? bot.get(1) : bot.get(0);
             Point br = bot.get(0).x > bot.get(1).x ? bot.get(0) : bot.get(1);
             result = new MatOfPoint2f(tl,tr,br,bl);
-            /*corners.push_back(tl);
-            corners.push_back(tr);
-            corners.push_back(br);
-            corners.push_back(bl);*/
 
         }
-        //Imgproc.getAffineTransform(corners,corners);
         return result;
+
+    }
+
+    public String devolverColorRGB(Mat imagenEntrada, List<Point> pp){
+
+        String r = "| ";
+
+        double maximoBlanco = 0.0;
+
+        //Suponemos que siempre es correcto, es decir, el primer punto será el blanco.
+        Point puntoBlanco = new Point();
+
+        for (int k=0; k<pp.size();k++) {
+
+            double[] pixel = imagenEntrada.get((int) pp.get(k).y, (int) pp.get(k).x);
+            double pixelSuma = pixel[0]+pixel[1]+pixel[2];
+
+            if(pixelSuma>maximoBlanco){
+                //actualizamos el máximo
+                maximoBlanco=pixelSuma;
+                puntoBlanco = pp.get(k);
+            }
+
+
+        }
+
+
+
+
+        //Creamos una lista con todos los puntos menos el blanco
+        List<Point> resultado = new ArrayList<Point>();
+        List<Point> aux = new ArrayList<>();
+        boolean encontrado = false;
+
+        for (int j=0; j<pp.size();j++)  {
+
+            //diferenciar entre antes del blanco y despues del blanco
+
+            if(pp.get(j).equals(puntoBlanco)){
+                encontrado = true;
+            }
+
+            if(!encontrado)
+                aux.add(pp.get(j));
+            else
+                resultado.add(pp.get(j));
+
+        }
+        if(!aux.isEmpty())
+            resultado.addAll(aux);
+
+
+        //En este punto tenemos el puntoBlanco
+
+        r += "BLANCO | ";
+
+        double[] pixelBlanco = imagenEntrada.get((int) puntoBlanco.y, (int) puntoBlanco.x);
+
+
+        //Para los demás puntos, tendremos 3 puntos como mucho
+        for (int i=0; i<resultado.size();i++) {
+
+            double[] pixel = imagenEntrada.get((int) resultado.get(i).y, (int) resultado.get(i).x);
+            double balanceRojo = (pixel[0] / pixelBlanco[0]) * 255;
+            double balanceVerde = (pixel[1] / pixelBlanco[1]) * 255;
+            double balanceAzul = (pixel[2] / pixelBlanco[2]) * 255;
+
+
+            //Encontrar el maximo de esos 3 y comparar con el adecuado
+
+            if(balanceRojo>balanceVerde && balanceRojo>balanceAzul){
+
+                //comprobar rojo
+                r+="ROJO | ";
+                //continue;
+
+            }
+
+            if(balanceVerde>balanceRojo && balanceVerde>balanceAzul){
+                //comprobar verde
+
+                r+="VERDE |";
+
+            }
+
+            if(balanceAzul>balanceRojo && balanceAzul>balanceVerde){
+                //comprobar azul
+                r+="AZUL |";
+
+            }
+
+
+
+            //Log.println(Log.ERROR,"Color ",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
+
+
+        }
+
+
+
+        return r;
 
     }
 
@@ -285,10 +382,6 @@ public class Procesador {
         int blanco = ColorUtil.argb(255,255,255);
 
         int colorMedio = ColorUtil.argb((int)pixel[0],(int)pixel[1],(int)pixel[2],(int)pixel[3]);
-        /*Scalar rojo = new Scalar(0,0,255,255);
-        Scalar verde = new Scalar(0,255,0,255);
-        Scalar azul = new Scalar(255,0,0);
-        Scalar blanco = new Scalar(255,255,255,255);*/
 
 
 
@@ -340,51 +433,35 @@ public class Procesador {
 
 
 
-
-
-
-
-        /*if(pixel[0] >= 130.0 && pixel[1]>= 100.0 && pixel[2]>=95.0){
-            Log.println(Log.ERROR,"Devolviendo blanco",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
-            return "BLANCO";
-        }*/
-
-
-
-        /*if (pixel[0] > pixel[1] && pixel[0] > pixel[2]){
-            Log.println(Log.ERROR,"Devolviendo color rojo",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
-            return "ROJO";
-        }
-        if (pixel[1] > pixel[0] && pixel[1] > pixel[2]){
-            Log.println(Log.ERROR,"Devolviendo color verde",String.valueOf(pixel[1]));
-            return "VERDE";
-        }
-
-        if (pixel[2] > pixel[1] && pixel[2] > pixel[0]){
-            Log.println(Log.ERROR,"Devolviendo color azul",String.valueOf(pixel[2]));
-            return "AZUL";
-        }*/
-
-        /*if (pixel[0] >= 180.0){
-            Log.println(Log.ERROR,"Devolviendo color rojo",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
-            return "ROJO";
-        }
-        if (pixel[1] >= 110.0){
-            Log.println(Log.ERROR,"Devolviendo color verde",String.valueOf(pixel[1]));
-            return "VERDE";
-        }
-
-        if (pixel[2]>= 120.0){
-            Log.println(Log.ERROR,"Devolviendo color azul",String.valueOf(pixel[2]));
-            return "AZUL";
-        }*/
-
-
-
         Log.println(Log.ERROR,"Devolviendo sin color",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
         return "SIN COLOR";
 
 
+    }
+
+    public String ordenarColoresRect(Mat imagen, List<RotatedRect> vector){
+
+        /*RotatedRect temp0 = new RotatedRect();
+        RotatedRect temp1 = new RotatedRect();
+        RotatedRect temp2 = new RotatedRect();
+        RotatedRect temp3 = new RotatedRect();*/
+
+        String resultado = " | ";
+
+        List<Point> puntosContornos = new ArrayList<Point>();
+
+
+        for(int i=0;i<vector.size();i++){
+
+            puntosContornos.add(vector.get(i).center);
+
+            //resultado+=color+" | ";
+
+        }
+
+        String color = devolverColorRGB(imagen,puntosContornos);
+
+        return color;
     }
 
 
@@ -423,7 +500,7 @@ public class Procesador {
         return maximo;
     }
 
-    public Mat procesarImagen(Mat entrada) {
+    public Mat procesarImagen(Mat entrada,boolean modoAlternativo) {
 
         /*if(!primerFrame){
             Mat prevImg = entrada.clone();
@@ -484,8 +561,20 @@ public class Procesador {
                 puntosContorno.add(pair.getRight());
             }
 
-            //Llamamos a ordenar los colores, que nos devolverá de que color es cada marcador
-            String res = ordenarColores(entrada,puntosContorno);
+
+            String res ="";
+
+            //modo false = contorno y espacio de color LAB
+            //modo true = punto del centro y el blanco primero
+
+            if(!modoAlternativo){
+                res = ordenarColoresRect(entrada,rectContorno);
+            }
+            else{
+                res = ordenarColores(entrada,puntosContorno);
+
+            }
+
 
 
             if(!rectContorno.isEmpty() && rectContorno.size()==4){
@@ -564,7 +653,7 @@ public class Procesador {
             Log.println(Log.ERROR,"tamano lista",String.valueOf(listaContornos.size()));
             Pair<RotatedRect,MatOfPoint> v = it.next();
             if(v.getLeft().angle>10 && v.getLeft().angle<165){
-                it.remove();
+               // it.remove();
                 Log.println(Log.ERROR,"borramos lista",String.valueOf(listaContornos.size()));
                 //listaContornos.
             }

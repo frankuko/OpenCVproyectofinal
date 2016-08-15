@@ -1,22 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
+        android:id="@+id/cambiarModo"
+        android:icon="@android:drawable/ic_menu_preferences"
+        android:title="Cambiar modo marcadores">
+        <menu>
+            <item
+                android:id="@+id/modo_normal"
+                android:title="Modo normal"/>
+            <item
+                android:id="@+id/modo_alternativo"
+                android:title="Modo alternativo"/>
+        </menu>
+
+    </item>
+    <item
         android:id="@+id/cambiarResolución"
         android:icon="@android:drawable/ic_menu_view"
         android:title="Cambiar resolución">
         <menu>
             <item
                 android:id="@+id/resolucion_1920x1080"
-                android:title="1920x1080"/>
+                android:title="Resolución cam. nativa"/>
             <item
                 android:id="@+id/resolucion_800x600"
-                android:title="800x600"/>
+                android:title="Resolución nativa / 2"/>
             <item
                 android:id="@+id/resolucion_640x480"
-                android:title="640x480"/>
+                android:title="Resolución nativa / 3"/>
             <item
                 android:id="@+id/resolucion_320x240"
-                android:title="320x240"/>
+                android:title="Resolución nativa / 4"/>
 
         </menu>
     </item>
