@@ -215,9 +215,6 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
 
 
 
-        /*cam_altura = height;
-        cam_anchura = width;*/
-
         cam_altura = height;
         cam_anchura = width;
 
@@ -240,7 +237,6 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
 
-        //Mat mRgba = new Mat();
         inputFrame.rgba().copyTo(_mRgba);
 
         //Mat salida = new Mat();
@@ -257,7 +253,6 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
             processor.barrelDistortion(_mRgba,new Point(columnas/2,filas/2),
                     new Point(columnas*4/16, filas/2), new Point(columnas*12/16, filas/2),k1,k2);
 
-           // salida = processor.procesaRojos(_mRgba);
         }
 
         framecount +=1;
@@ -266,11 +261,13 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
             System.gc();
         }
 
-        if(processor!=null)
-            salida = processor.procesaRojos(_mRgba);
+        if(processor!=null){
 
-        /*Imgproc.remap(_mRgba, salida, processor.getMapaX(), processor.getMapaY(),
-                Imgproc.INTER_LINEAR, Core.BORDER_TRANSPARENT, s);*/
+            Mat intermedio = processor.procesarImagen(_mRgba);
+            Imgproc.remap(intermedio, salida, processor.getMapaX(), processor.getMapaY(),
+                    Imgproc.INTER_LINEAR, Core.BORDER_TRANSPARENT, s);
+        }
+
 
 
 

@@ -10,6 +10,7 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfDouble;
+import org.opencv.core.MatOfFloat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfPoint3f;
@@ -21,6 +22,7 @@ import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.utils.Converters;
+import org.opencv.video.Video;
 
 import java.io.Console;
 import java.nio.DoubleBuffer;
@@ -62,6 +64,10 @@ public class Procesador {
 
     private List<MatOfPoint> contornosFinales;
 
+    private boolean primerFrame;
+    private Mat prevImg;
+    private MatOfPoint2f nextPts;
+
     //Matriz de referencia de la tarjeta
 
 
@@ -79,6 +85,11 @@ public class Procesador {
         bordes = new Mat();
         imgBordes = new Mat();
         hierarchy = new Mat();
+
+
+        prevImg = new Mat();
+        primerFrame = true;
+        nextPts = new MatOfPoint2f();
 
         marcadores = new MatOfPoint3f(new Point3(0,0,0),new Point3(20,0,0),new Point3(0,20,0),new Point3(20,20,0));
         int r = 0;
@@ -258,10 +269,6 @@ public class Procesador {
 
 
 
-
-
-
-
         double[] pixel = media.val;//imagenEntrada.get((int) p.y, (int) p.x);
 
         //r = pixel[0]
@@ -384,46 +391,16 @@ public class Procesador {
 
     public String ordenarColores(Mat imagen, List<MatOfPoint> vector){
 
-        MatOfPoint temp0 = new MatOfPoint();
-        MatOfPoint temp1 = new MatOfPoint();
-        MatOfPoint temp2 = new MatOfPoint();
-        MatOfPoint temp3 = new MatOfPoint();
-
-
-
-
-
-       //Core.mean(vector.get(i))
         String resultado = " | ";
 
         for(int i=0;i<vector.size();i++){
             //Core.mean(vector.get(i));
             String color = devolverColor(imagen,vector.get(i));
             resultado+=color+" | ";
-            switch (color){
-                case "BLANCO":
-                    temp0=vector.get(i);
-                    break;
-                case "ROJO":
-                    temp1=vector.get(i);
-                    break;
-                case "VERDE":
-                    temp2=vector.get(i);
-                    break;
-                case "AZUL":
-                    temp3=vector.get(i);
-                    break;
-            }
+
 
         }
 
-        vector.set(0,temp0);
-        vector.set(1,temp1);
-        vector.set(2,temp2);
-        vector.set(3,temp3);
-
-        //return vector;
-        //return null;
         return resultado;
 
 
@@ -446,12 +423,13 @@ public class Procesador {
         return maximo;
     }
 
-    public Mat procesaRojos(Mat entrada) {
+    public Mat procesarImagen(Mat entrada) {
+
+        /*if(!primerFrame){
+            Mat prevImg = entrada.clone();
+        }*/
 
 
-
-        //Vector de candidatos
-        Vector<RotatedRect> candidatos = new Vector<>();
 
         //Probar a inicializar en el constructor
         List<Mat> lista = new ArrayList<Mat>(4) ;
@@ -473,7 +451,172 @@ public class Procesador {
 
         List<MatOfPoint> contornos = new ArrayList<MatOfPoint>();
         List<Pair<RotatedRect,MatOfPoint>> listaContornos = new ArrayList<Pair<RotatedRect,MatOfPoint>>();
+
+
         Imgproc.findContours(bordes,contornos,hierarchy,Imgproc.RETR_LIST,Imgproc.CHAIN_APPROX_NONE);
+
+        //en este metodo obtenemos los contornos candidatos y los guardamos en listaContornos
+        optimizarContornos(maximo, contornos, listaContornos);
+
+        //SI TENEMOS MÁS DE 4 CANDIDATOS DEBEMOS REDUCIR EL NÚMERO
+        if(!listaContornos.isEmpty() && listaContornos.size()>4){
+            //reducimos a los candidatos circulares
+            //debemos reducir el número a los 4 candidatos más grandes
+            reducirCandidatos(listaContornos);
+        }
+
+        //SI TENEMOS 4 CANDIDATOS PASAMOS A ORDENARLOS
+        if (!listaContornos.isEmpty() && listaContornos.size()==4){
+
+
+            //Todos los contornos que forman parte de los rotatedrect, cada mat of point es un contorno
+            List<MatOfPoint> puntosContorno = new ArrayList<MatOfPoint>();
+            //Los 4 objetos rotated red
+            List<RotatedRect> rectContorno = new ArrayList<RotatedRect>();
+
+
+            listaContornos = ordernaEsquinas(listaContornos);
+
+
+            //Sacamos de la lista los contornos(MatofPoint) y los RotatedRect ya ordenados
+            for (Pair<RotatedRect,MatOfPoint> pair: listaContornos) {
+                rectContorno.add(pair.getLeft());
+                puntosContorno.add(pair.getRight());
+            }
+
+            //Llamamos a ordenar los colores, que nos devolverá de que color es cada marcador
+            String res = ordenarColores(entrada,puntosContorno);
+
+
+            if(!rectContorno.isEmpty() && rectContorno.size()==4){
+
+                //Extraemos los puntos centrales de los contornos y comprobamos si son convexos
+                MatOfPoint2f puntosCentrales2f = new MatOfPoint2f(rectContorno.get(0).center,rectContorno.get(1).center,
+                        rectContorno.get(2).center,rectContorno.get(3).center);
+
+                MatOfPoint puntosCentrales = new MatOfPoint(rectContorno.get(0).center,rectContorno.get(1).center,
+                        rectContorno.get(2).center,rectContorno.get(3).center);
+
+
+                //Si forman un contorno convexo
+                if(Imgproc.isContourConvex(puntosCentrales)) {
+
+
+                    Mat rvec = new Mat();
+                    Mat tvec = new Mat();
+
+
+                    double fontScale = 200;
+                    Scalar color = new Scalar(fontScale);
+                    Point p = new Point(200, 200);
+
+
+                    //EN ESTE PUNTO TENEMOS QUE GUARDAR EL FRAME
+                    /*if(!primerFrame){
+                        Mat prevImg = entrada;
+                    }*/
+
+
+                   // MatOfByte status = new MatOfByte();
+                   // MatOfFloat err = new MatOfFloat();
+                    //TODO GUARDAR PUNTOS CENTRALES2F
+
+                    //TODO TENEMOS LOS PUNTOSCENTRALES2F, QUE SON LOS PUNTOS DEL FRAME Y TENEMOS QUE CALCULAR LOS SIGUIENTES
+                    //TODO IDEA, DESPUES DE ESTO GUARDAR LOS PUNTOSCENTRALES EN VARIABLE GLOBAL PARA COMPROBAR AL PRINCIPIO DEL METODO
+                    //Video.calcOpticalFlowPyrLK(prevImg, entrada, puntosCentrales2f, nextPts, status, err);
+
+
+                    //En este punto tenemos que dibujar los contornos.
+                    for (int k = 0; k < puntosContorno.size(); k++)
+                        Imgproc.drawContours(entrada, puntosContorno, k, new Scalar(255, 0, 0), 1);
+                    for (int j = 0; j < rectContorno.size(); ++j) {
+                        Imgproc.line(entrada, rectContorno.get(j).center, rectContorno.get((j + 1) % rectContorno.size()).center, new Scalar(255, 255, 255));
+                    }
+                    Imgproc.putText(entrada, res, p, Core.FONT_HERSHEY_PLAIN, 1, color, 1);
+
+
+                }
+
+            }
+
+        }
+
+        return entrada;
+
+
+    }
+
+    /**
+     * Metodo reducir candidatos. Si tenemos más de 4 contornos en la lista debemos de quedarnos con los más grandes
+     * @param listaContornos Lista de pares RotatedRect-Contorno.
+     */
+    private void reducirCandidatos(List<Pair<RotatedRect, MatOfPoint>> listaContornos) {
+        Iterator<Pair<RotatedRect,MatOfPoint>> it = listaContornos.iterator();
+
+        double tam0 = 0.0;
+        double tam1 = 0.0;
+        double tam2 = 0.0;
+        double tam3 = 0.0;
+
+
+        Log.println(Log.ERROR,"tamano lista",String.valueOf(listaContornos.size()));
+        while (it.hasNext()){
+            Log.println(Log.ERROR,"tamano lista",String.valueOf(listaContornos.size()));
+            Pair<RotatedRect,MatOfPoint> v = it.next();
+            if(v.getLeft().angle>10 && v.getLeft().angle<165){
+                it.remove();
+                Log.println(Log.ERROR,"borramos lista",String.valueOf(listaContornos.size()));
+                //listaContornos.
+            }
+
+            else if(listaContornos.size()>4) {
+
+                    if(v.getLeft().size.area()>tam0){
+                        //tenemos un nuevo valor mayor
+                        tam3=tam2;
+                        tam2=tam1;
+                        tam1=tam0;
+                        tam0=v.getLeft().size.area();
+                    }
+                    else
+                        if(v.getLeft().size.area()>tam1){
+                            tam3=tam2;
+                            tam2=tam1;
+                            tam1=v.getLeft().size.area();
+                        }
+
+                        else
+                            if(v.getLeft().size.area()>tam2){
+                                tam3=tam2;
+                                tam2 = v.getLeft().size.area();
+                            }
+
+                            else
+                                if(v.getLeft().size.area()>tam3)
+                                    tam3 = v.getLeft().size.area();
+                                else{
+                                    Log.println(Log.ERROR,"borramos lista",String.valueOf(listaContornos.size()));
+                                    it.remove();
+                                }
+
+                  }
+
+
+
+        }
+        Log.println(Log.ERROR,"Candidatos",String.valueOf(listaContornos.size()));
+    }
+
+    /**
+     *
+     * @param maximo Matriz de entrada que contiene el máximo de los canales RGB de la imagen
+     * @param contornos Lista de contornos obtenidos con el método findContours
+     * @param listaContornos Lista de pares RotatedRect-Contorno que obtendremos como resultado
+     */
+    private void optimizarContornos(Mat maximo, List<MatOfPoint> contornos, List<Pair<RotatedRect, MatOfPoint>> listaContornos) {
+
+        //Vector de candidatos
+        Vector<RotatedRect> candidatos = new Vector<>();
 
         for (int c=0; c<contornos.size();c++){
 
@@ -487,9 +630,8 @@ public class Procesador {
 
                 //test de area, comprobar area minima
                  double area = Imgproc.contourArea(contornos.get(c));
-                //Log.println(Log.ERROR,"DEBUG area contorno",String.valueOf(area));
 
-                if((area>=100.0) && (area<=1100)){
+                if((area>=20.0) && (area<=1100)){
 
                     MatOfPoint2f temp=new MatOfPoint2f();
                     temp.fromList(contornos.get(c).toList());
@@ -497,8 +639,7 @@ public class Procesador {
 
                     double areaTeorica= 3.1416*elip.size.width*elip.size.height/4.0;
                     double ratioForma= (area+4)/areaTeorica;
-                    //Log.println(Log.ERROR,"areas", String.valueOf(areaTeorica)+" | "+String.valueOf(area));
-                    //Log.println(Log.ERROR,"ratio forma",String.valueOf(ratioForma));
+
 
                     //en este test comprobamos si el area teorica
                     //es similar a la calculada, si hay un porcentaje del 98% continuamos
@@ -509,7 +650,6 @@ public class Procesador {
 
                         //cogemos los puntos totales del contorno y tomamos muestras de 3 en 3
                         for (int k= 0; k<contornos.get(c).size().height; k+= 3) {
-
 
                             List<Point> listaPuntos = contornos.get(c).toList();
                             //Point[] arrayPuntos = contornos.get(c).toArray();
@@ -522,12 +662,9 @@ public class Procesador {
 
 
 
-
                             double[] pixelInt = maximo.get((int) ptInt.y, (int) ptInt.x);
                             double[] pixelExt = maximo.get((int) ptExt.y, (int) ptExt.x);
 
-                            //double pixelInt = buff[(int)ptInt.x+(int)ptInt.y];
-                            //double pixelExt = buff[(int)ptExt.x+(int)ptExt.y];
                             if(pixelInt!=null && pixelExt != null) {
                                 cuentaClaros += (pixelInt[0] - 20 > pixelExt[0]) ? 1 : 0;
                                 totalPuntos++;
@@ -555,8 +692,6 @@ public class Procesador {
                                     listaContornos.add(par);
 
 
-                                    //contornosFinales.add(contornos.get(c));
-
                                     anadido= true;
                                     //Imgproc.drawContours(entrada, contornos, c, new Scalar(255,0,0), 1);
                                     Log.println(Log.ERROR,"C añadido | total cands",String.valueOf(c) + " | "+ String.valueOf(candidatos.size()));
@@ -576,154 +711,6 @@ public class Procesador {
 
 
         }
-
-        if(!listaContornos.isEmpty() && listaContornos.size()>4){
-            //reducimos a los candidatos circulares
-            //debemos reducir el número a los 4 candidatos más grandes
-            Iterator<Pair<RotatedRect,MatOfPoint>> it = listaContornos.iterator();
-            //double minTamano = Integer.MAX_VALUE;;
-            double tam0 = 0.0;
-            double tam1 = 0.0;
-            double tam2 = 0.0;
-            double tam3 = 0.0;
-
-            /*for (Pair<RotatedRect,Integer> pair: listaContornos) {
-
-                //Log.println(Log.ERROR,"Pares de contornos",String.valueOf(pair.getRight()));
-            }*/
-            Log.println(Log.ERROR,"tamano lista",String.valueOf(listaContornos.size()));
-            while (it.hasNext()){
-                Log.println(Log.ERROR,"tamano lista",String.valueOf(listaContornos.size()));
-                Pair<RotatedRect,MatOfPoint> v = it.next();
-                if(v.getLeft().angle>10 && v.getLeft().angle<165){
-                    it.remove();
-                    Log.println(Log.ERROR,"borramos lista",String.valueOf(listaContornos.size()));
-                    //listaContornos.
-                }
-
-                else if(listaContornos.size()>4) {
-
-                        if(v.getLeft().size.area()>tam0){
-                            //tenemos un nuevo valor mayor
-                            tam3=tam2;
-                            tam2=tam1;
-                            tam1=tam0;
-                            tam0=v.getLeft().size.area();
-                        }
-                        else
-                            if(v.getLeft().size.area()>tam1){
-                                tam3=tam2;
-                                tam2=tam1;
-                                tam1=v.getLeft().size.area();
-                            }
-
-                            else
-                                if(v.getLeft().size.area()>tam2){
-                                    tam3=tam2;
-                                    tam2 = v.getLeft().size.area();
-                                }
-
-                                else
-                                    if(v.getLeft().size.area()>tam3)
-                                        tam3 = v.getLeft().size.area();
-                                    else{
-                                        Log.println(Log.ERROR,"borramos lista",String.valueOf(listaContornos.size()));
-                                        it.remove();
-                                    }
-
-                      }
-
-
-
-            }
-            Log.println(Log.ERROR,"Candidatos",String.valueOf(listaContornos.size()));
-        }
-
-        if (!listaContornos.isEmpty() && listaContornos.size()==4){
-
-            //Todos los contornos que forman parte de los rotatedrect, cada mat of point es un contorno
-            List<MatOfPoint> puntosContorno = new ArrayList<MatOfPoint>();
-            //Los 4 objetos rotated red
-            List<RotatedRect> rectContorno = new ArrayList<RotatedRect>();
-
-
-
-
-
-            //puntosCentrales2f = ordernaEsquinas(puntosCentrales2f,centerRect);
-            listaContornos = ordernaEsquinas(listaContornos);
-
-
-            //TODO IMPORTANTE CAMBIAR ORDENARCOLORES DESPUES DE ORDENAR LAS ESQUINAS
-
-
-            //Sacamos de la lista los contornos(MatofPoint) y los RotatedRect
-            for (Pair<RotatedRect,MatOfPoint> pair: listaContornos) {
-                rectContorno.add(pair.getLeft());
-                puntosContorno.add(pair.getRight());
-            }
-
-            //Llamamos a ordenar los colores, que nos devolverá que color es cada marcador
-            String res = ordenarColores(entrada,puntosContorno);
-
-            if(!rectContorno.isEmpty() && rectContorno.size()==4){
-
-                //Extraemos los puntos centrales de los contornos y comprobamos si son convexos
-                MatOfPoint2f puntosCentrales2f = new MatOfPoint2f(rectContorno.get(0).center,rectContorno.get(1).center,
-                        rectContorno.get(2).center,rectContorno.get(3).center);
-
-                MatOfPoint puntosCentrales = new MatOfPoint(rectContorno.get(0).center,rectContorno.get(1).center,
-                        rectContorno.get(2).center,rectContorno.get(3).center);
-
-                //Ordenamos los puntos centrales
-
-
-                if(Imgproc.isContourConvex(puntosCentrales)) {
-
-
-
-                    String res2 = ordenarColores(entrada,puntosContorno);
-
-
-                    Mat rvec = new Mat();
-                    Mat tvec = new Mat();
-
-                    /*List<Point> r = new ArrayList<Point>();
-                    for (int y = 0; y < rectContorno.size(); y++) {
-
-                        r.add(rectContorno.get(y).center);
-
-                    }
-                    MatOfPoint2f temp = new MatOfPoint2f();
-                    temp.fromList(r);*/
-
-                    double fontScale = 200;
-                    Scalar color = new Scalar(fontScale);
-                    Point p = new Point(300, 300);
-
-                    for (int k = 0; k < puntosContorno.size(); k++)
-                        Imgproc.drawContours(entrada, puntosContorno, k, new Scalar(255, 0, 0), 1);
-                    for (int j = 0; j < rectContorno.size(); ++j) {
-                        Imgproc.line(entrada, rectContorno.get(j).center, rectContorno.get((j + 1) % rectContorno.size()).center, new Scalar(255, 255, 255));
-                    }
-                    Imgproc.putText(entrada, res, p, Core.FONT_HERSHEY_PLAIN, 1, color, 1);
-
-                    //Calib3d.solvePnP(marcadores, puntosCentrales2f, K, calibracion, rvec, tvec);
-                }
-
-            }
-
-        }
-
-        return entrada;
-
-       /* Core.extractChannel(entrada,red1,0);
-        Mat salida = entrada.clone();
-        entrada.release();
-        //Substraemos del canal R el máximo de los canales G y B
-        Core.subtract(red1,maxGB,salida);
-        //Devolvemos la matriz que ve rojo.
-        return salida;*/
     }
 
     public void barrelDistortion(Mat entrada, Point centro, Point centroI, Point centroD, double d1, double d2){
