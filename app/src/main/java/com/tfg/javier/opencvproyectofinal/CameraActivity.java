@@ -1,15 +1,21 @@
 package com.tfg.javier.opencvproyectofinal;
 
 import android.app.Activity;
+import android.graphics.PixelFormat;
+import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import com.tfg.javier.opencvproyectofinal.ProcesoImagenes.Procesador;
+import com.tfg.javier.opencvproyectofinal.adapters.CameraProjectionAdapter;
+import com.tfg.javier.opencvproyectofinal.filtros.ar.ARCubeRenderer;
+import com.tfg.javier.opencvproyectofinal.filtros.ar.SquareRenderer;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
@@ -61,6 +67,11 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
 
     private boolean modoAlternativo = false;
 
+    private CameraProjectionAdapter mCameraProjectionAdapter;
+
+    private ARCubeRenderer mARRenderer;
+    private SquareRenderer squareRenderer;
+
     static {
         if(OpenCVLoader.initDebug()){
             Log.i(TAG,"OpenCV se cargo bien");
@@ -111,7 +122,7 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
         setContentView(R.layout.activity_main);
 
         cameraView = (CameraBridgeViewBase) findViewById(R.id.vista_camara);
-        cameraView.setCvCameraViewListener(this);
+
 
         if(savedInstanceState != null){
             indiceCamara = savedInstanceState.getInt(STATE_CAMERA_INDEX,0);
@@ -121,6 +132,26 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
         }
 
         cameraView.setCameraIndex(indiceCamara);
+
+        //opengl
+        GLSurfaceView glSurfaceView = new GLSurfaceView(this);
+        glSurfaceView.getHolder().setFormat(PixelFormat.TRANSPARENT);
+        glSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 0, 0);
+        glSurfaceView.setZOrderOnTop(true);
+        addContentView(glSurfaceView,new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT));
+
+        mCameraProjectionAdapter = new CameraProjectionAdapter();
+
+        mARRenderer = new ARCubeRenderer();
+        mARRenderer.cameraProjectionAdapter = mCameraProjectionAdapter;
+       // squareRenderer = new SquareRenderer();
+        //mARRenderer.
+
+        glSurfaceView.setRenderer(mARRenderer);
+
+        cameraView.setCvCameraViewListener(this);
 
 
     }
@@ -243,6 +274,7 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
 
 
         inputFrame.rgba().copyTo(_mRgba);
+        float[] glPose = null;
 
         //Mat salida = new Mat();
 
@@ -269,9 +301,23 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
         if(processor!=null){
 
 
-            Mat intermedio = processor.procesarImagen(_mRgba,modoAlternativo);
+            /*Mat intermedio = processor.procesarImagen(_mRgba,modoAlternativo,glPose);
+
+            if(glPose!=null)
+                mARRenderer.GLpose = glPose;
+            else
+                mARRenderer.GLpose = null;*/
+
+            Mat intermedio = processor.procesarImagen(_mRgba,modoAlternativo,mARRenderer);
+
+           /* if(glPose!=null)
+                mARRenderer.GLpose = glPose;
+            else
+                mARRenderer.GLpose = null;*/
+
+
             Imgproc.remap(intermedio, salida, processor.getMapaX(), processor.getMapaY(),
-                    Imgproc.INTER_CUBIC, Core.BORDER_REPLICATE, s);
+                    Imgproc.INTER_CUBIC, Core.BORDER_TRANSPARENT, s);
             //Imgproc.Inter_
 
 

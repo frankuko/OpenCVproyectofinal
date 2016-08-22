@@ -17,9 +17,10 @@ import javax.microedition.khronos.opengles.GL11;
  */
 public class ARCubeRenderer implements GLSurfaceView.Renderer {
 
-    public ARFilter filter;
+    public float[] GLpose;
     public CameraProjectionAdapter cameraProjectionAdapter;
-    public float scale = 100f;
+    //50
+    public float scale = 30f;
 
     private static final ByteBuffer VERTICES;
     private static final ByteBuffer COLORS;
@@ -42,7 +43,7 @@ public class ARCubeRenderer implements GLSurfaceView.Renderer {
         });
         VERTICES.position(0);
 
-        COLORS = ByteBuffer.allocate(32);
+        COLORS = ByteBuffer.allocateDirect(32);
         COLORS.put(new byte[]{
                 //amarillo
                 Byte.MAX_VALUE, Byte.MAX_VALUE, 0, Byte.MAX_VALUE,
@@ -65,7 +66,7 @@ public class ARCubeRenderer implements GLSurfaceView.Renderer {
         });
         COLORS.position(0);
 
-        TRIANGLE_FAN_0 = ByteBuffer.allocate(18);
+        TRIANGLE_FAN_0 = ByteBuffer.allocateDirect(18);
         TRIANGLE_FAN_0.put(new byte[]{
                 1, 0 ,3,
                 1, 3, 2,
@@ -77,9 +78,9 @@ public class ARCubeRenderer implements GLSurfaceView.Renderer {
         TRIANGLE_FAN_0.position(0);
 
 
-        TRIANGLE_FAN_1 = ByteBuffer.allocate(18);
+        TRIANGLE_FAN_1 = ByteBuffer.allocateDirect(18);
         TRIANGLE_FAN_1.put(new byte[]{
-                7, 4 ,2,
+                7, 4 ,5,
                 7, 5, 6,
                 7, 6, 2,
                 7, 2, 3,
@@ -109,15 +110,15 @@ public class ARCubeRenderer implements GLSurfaceView.Renderer {
 
 
         //si hay nulos salimos
-        if(filter == null){
+        /*if(filter == null){
             return;
-        }
+        }*/
 
         if(cameraProjectionAdapter == null){
             return;
         }
 
-        float[] pose = filter.getGLPose();
+        float[] pose = GLpose;
         if(pose == null){
             return;
         }

@@ -16,7 +16,7 @@ public class CameraProjectionAdapter {
     float mFOVY = 43.6f;
     float mFOVX = 65.4f;
 
-    int mHeightPx = 640;
+    int mHeightPx = 800;
     int mWidthPx = 480;
 
     float mNear = 1f;

@@ -6,6 +6,7 @@ import android.util.DebugUtils;
 import android.util.Log;
 
 import com.tfg.javier.opencvproyectofinal.adapters.CameraProjectionAdapter;
+import com.tfg.javier.opencvproyectofinal.filtros.ar.ARCubeRenderer;
 
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
@@ -59,14 +60,14 @@ public class Procesador {
 
    // private org.opencv.core.MatOfPoint3f marcadores;
     private Mat p3d;
-    private MatOfPoint3 p3d3;
+    private MatOfPoint3f p3d3;
 
     private Mat K;
 
     private MatOfDouble calibracion;
 
     private float[] mGLPose;
-
+    private float[] mGLPose1;
     /*private List<MatOfPoint> contornosFinales;
 
     private boolean primerFrame;
@@ -93,6 +94,7 @@ public class Procesador {
         hierarchy = new Mat();
 
         mGLPose = new float[12];
+        mGLPose1 = new float[16];
 
 
         /*prevImg = new Mat();
@@ -104,7 +106,7 @@ public class Procesador {
 
         //MARCADORES ES EL TAMAÑO DEL MARCADOR QUE QUEREMOS RECONOCES
 
-        marcadores = new MatOfPoint3f(new Point3(0,0,0),new Point3(20,0,0),new Point3(0,20,0),new Point3(20,20,0));
+        marcadores = new MatOfPoint3f(new Point3(0,0,0),new Point3(20,0,0),new Point3(20,20,0),new Point3(0,20,0));
         int r = 0;
         int c = 0;
         //marcadores.put(r,c,0,0,0,20,0,0,0,20,0,20,20,0);
@@ -115,7 +117,7 @@ public class Procesador {
 
         p3d.put(r,c,1,1,5,1,2,5,2,2,5,2,1,5,1,1,6,1,2,6,2,2,6,2,1,6,2.5,1.5,5.5);
 
-        p3d3 = new MatOfPoint3(new Point3(1,1,5),
+        p3d3 = new MatOfPoint3f(new Point3(1,1,5),
                 new Point3(1,2,5),
                 new Point3(2,2,5),
                 new Point3(2,1,5),
@@ -154,69 +156,27 @@ public class Procesador {
 
     }
 
-    void drawCube(Mat dst, Mat object){
-
+    void drawCube(Mat dst, List<Point> object){
         int [] array = {1,2,3,4,1,5,6,7,8,5,6,2,6,7,3,7,8,4,9,3,7,9,8};
 
-       /* int npixels = (int)RT.total() * (int)RT.elemSize();
-        double[] pixels = new double[npixels];
-        RT.get(0,0,pixels);
+        for(int i = 1; i<array.length-1; ++i){
 
-        Rt.put(0,0,pixels);*/
-        Mat C = new Mat();
+            Point p1 = object.get(array[i-1]-1);
+            Point p2 = object.get(array[i]-1);
 
-        int size = (int) (object.total() * object.channels() * object.elemSize());
-        float[] temp = new float[size]; // use double[] instead of byte[]
-        object.get(0, 0, temp);
-        for (int j = 0; j < size; j++)
-            temp[j] = (temp[j] / 2);  // no more casting required.
-        C.put(0, 0, temp);
+            if(p1.x < 0)
+                p1.x = -1 * p1.x;
+            if(p2.x < 0 )
+                p2.x = -1 * p2.x;
 
+            Imgproc.line(dst,p1,p2,new Scalar(0,255,0));
 
-
-
-        for(int i=0; i<22; i++){
-
-            //List<Point> listaPuntos = object.toList();
-            //Point[] arrayPuntos = contornos.get(c).toArray();
-            //Cogemos el punto y lo comparamos con su centro de la elipse
-
-            //line(dst, Point(object.at<float>(array[i]-1,0),object.at<float>(array[i]-1,1)),
-            // Point(object.at<float>(array[i+1]-1,0),object.at<float>(array[i+1]-1,1)),
-            // CV_RGB(0,255,0));
-
-
-
-            long x0 = object.dataAddr() + object.step1(0)*i + object.step1(1)*0;
-            long x1 = object.dataAddr() + object.step1(0)*i + object.step1(1)*1;
-
-            double[] pt1 = object.get(array[i]-1,0);
-            double[] pt2 = object.get(array[i]-1,1);
-            Point p1 = new Point();
-           // p1.set(pt1,pt2);
-            //Point pt2 = listaPuntos.get(array[i]);
-
-
-            double[] pt3 = object.get(array[i+1]-1,0);
-            double[] pt4 = object.get(array[i+1]-1,1);
-
-            //Punto de
-/*
-            object.at<float>(array[i]-1,0)
-            //a
-            object.at<float>(array[i]-1,1))
-
-            //Punto de
-            object.at<float>(array[i+1]-1,0)
-            //a
-            object.at<float>(array[i+1]-1,1)*/
-
-            //COLORCV_RGB(0,255,0)
-
-            //Imgproc.line(dst,);
         }
 
+
+
     }
+
 
     public List<Pair<RotatedRect,MatOfPoint>> ordernaEsquinas(List<Pair<RotatedRect,MatOfPoint>> listaContornos){
 
@@ -591,7 +551,7 @@ public class Procesador {
         return bordes;
     }
 
-    public Mat procesarImagen(Mat entrada,boolean modoAlternativo) {
+    public Mat procesarImagen(Mat entrada,boolean modoAlternativo,ARCubeRenderer renderer) {
 
 
 
@@ -703,7 +663,27 @@ public class Procesador {
                     //TODO IDEA, DESPUES DE ESTO GUARDAR LOS PUNTOSCENTRALES EN VARIABLE GLOBAL PARA COMPROBAR AL PRINCIPIO DEL METODO
                     //Video.calcOpticalFlowPyrLK(prevImg, entrada, puntosCentrales2f, nextPts, status, err);
                     //trackingPoints(prevImg,entrada,puntosCentrales2f,prevPts);
-                    findPose(entrada,puntosCentrales2f,rvec,tvec,mRotation);
+
+                    List<Point> pos = findPose(entrada,puntosCentrales2f,rvec,tvec,mRotation);
+
+                    //Mat H = findPose2(puntosCentrales2f,rvec,tvec);
+                    //renderer.GLpose = pos;
+
+                    int [] array = {1,2,3,4,1,5,6,7,8,5,6,2,6,7,3,7,8,4,9,3,7,9,8};
+
+                    for(int i = 1; i<array.length-1; ++i){
+
+                        Point p1 = pos.get(array[i-1]-1);
+                        Point p2 = pos.get(array[i]-1);
+
+                        if(p1.x < 0)
+                            p1.x = -1 * p1.x;
+                        if(p2.x < 0 )
+                            p2.x = -1 * p2.x;
+
+                        Imgproc.line(entrada,p1,p2,new Scalar(0,255,0));
+
+                    }
 
                     //En este punto tenemos que dibujar los contornos.
                     for (int k = 0; k < puntosContorno.size(); k++)
@@ -714,89 +694,34 @@ public class Procesador {
                     Imgproc.putText(entrada, res, p, Core.FONT_HERSHEY_PLAIN, 1, color, 1);
 
 
+                    //Imgproc.warpPerspective(entrada,entrada,H,entrada.size());
                 }
 
             }
 
         }
-
+        /*if(glPose!=null)
+            Log.e("Valor de glpose 0 :",String.valueOf(glPose[0])) ;*/
         return entrada;
 
 
     }
 
-    /*private void trackingPoints(Mat prevFrame,Mat actFrame,MatOfPoint2f puntos,MatOfPoint2f ptsAnteriores){
-        *//*Mat prev=new Mat(actFrame.size(),CvType.CV_8UC1);
-        Mat curr=new Mat(actFrame.size(),CvType.CV_8UC1);*//*
-        //MatOfPoint2f tmpCorners =new MatOfPoint2f();
-        MatOfFloat err=new MatOfFloat();
-        MatOfByte status = new MatOfByte();
-        int x,j,count;
-        TermCriteria optical_flow_termination_criteria=new TermCriteria();//=(TermCriteria.MAX_ITER|TermCriteria.EPS,20,.3);//  ( CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, .3 );
-        optical_flow_termination_criteria.epsilon=.3;
-        optical_flow_termination_criteria.maxCount =20;
 
-        if(prevPts.rows() == 0){
-            //primeraVez que entramos
+    private Mat findPose2(MatOfPoint2f puntosCentrales,MatOfDouble rvec, MatOfDouble tvec){
 
-            Imgproc.cvtColor(actFrame, currImg, Imgproc.COLOR_RGBA2GRAY);
+        MatOfPoint2f listaM = new MatOfPoint2f(new Point(0,0),new Point(20,0),new Point(20,20),new Point(0,20));
 
-            //guardamos los puntos anteriores
-            prevPts.fromArray(puntos.toArray());
-            prevPts.copyTo(safePts);
-        }
-        else{
-            //ya hemos pasado por ptsAnteriores
-            //copiamos la imagenactual a la anterior
-            currImg.copyTo(prevImg);
+        List<Point> punticos = puntosCentrales.toList();
 
-            Imgproc.cvtColor(actFrame, currImg, Imgproc.COLOR_RGBA2GRAY);
+        Mat H = Calib3d.findHomography(listaM,puntosCentrales);
+        //Imgproc.warpPerspective();
 
-            //cogemos los puntos anteriores para usarlos
-            safePts.copyTo(prevPts);
-
-            //los puntos actuales nos serviran para la siguiente iteracion
-            nextPts.copyTo(prevPts);
-
-            //en ptsAnteriores tenemos los puntos
-
-        }
+        return H;
+    }
 
 
-        //if(puntos.total()>0)
-        Video.calcOpticalFlowPyrLK(prevImg, currImg, prevPts, nextPts, status, err);
-
-        List<Point> cornersPrev = prevPts.toList();
-        List<Point> cornersThis = nextPts.toList();
-        List<Byte> byteStatus = status.toList();
-        Point pt,pt2;
-
-        for (x = 0; x < byteStatus.size() - 1; x++) {
-            if (byteStatus.get(x) == 1) {
-                pt = cornersThis.get(x);
-                pt2 = cornersPrev.get(x);
-
-                Imgproc.circle(actFrame, pt, 5, new Scalar(255,0,0), 2);
-                Imgproc.line(actFrame, pt, pt2, new Scalar(255,0,0), 1);
-            }
-        }
-        *//*MatOfPoint2f corners2f=new MatOfPoint2f();
-        //hp.corners.convertTo(corners2f, CvType.CV_32FC2);
-        List<Point> plist = new ArrayList<Point>();
-        for (i = 0,j=0; i < 4; i += 1)
-        {
-            if(i==hp.corners.total())
-                break;
-            if (status.toList().get(i) == 1)
-            {
-                corners2f.toList().set(j, tmpCorners.toList().get(i));// .get(i)=tmpCorners.toList().get(i);
-                nextPts.toList().set(j, nextPts.toList().get(i));
-                j+=1;
-            }
-        }*//*
-    }*/
-
-    private boolean findPose(Mat entrada, MatOfPoint2f puntosCentrales, MatOfDouble rvec, MatOfDouble tvec,MatOfDouble mRotation){
+    private List<Point> findPose(Mat entrada, MatOfPoint2f puntosCentrales, MatOfDouble rvec, MatOfDouble tvec,MatOfDouble mRotation){
        /* final List<Point3> goodReferencePointsList =
                 new ArrayList<Point3>();
 
@@ -804,6 +729,7 @@ public class Procesador {
                 new ArrayList<Point>();*/
 
         //marcadores son los puntos de referencia
+
 
 
         CameraProjectionAdapter mCameraProjectionAdapter = new CameraProjectionAdapter();
@@ -820,39 +746,42 @@ public class Procesador {
         MatOfDouble projection =
                 mCameraProjectionAdapter.getProjectionCV();
 
-        if(Calib3d.solvePnP(marcadores,puntosCentrales,projection,calibracion,rvec,tvec)==false)
-            return false;
+
+        if(!Calib3d.solvePnP(marcadores,puntosCentrales,projection,calibracion,rvec,tvec))
+            return null;
 
 
 
         double[] rVecArray = rvec.toArray();
+        MatOfDouble rvec2 = new MatOfDouble();
+
         rVecArray[1] *= -1.0;
         rVecArray[2] *= -1.0;
-        rvec.fromArray(rVecArray);
+        rvec2.fromArray(rVecArray);
 
-        Calib3d.Rodrigues(rvec,mRotation);
+        Calib3d.Rodrigues(rvec2,mRotation);
 
         MatOfDouble RT = new MatOfDouble(1,3,CvType.CV_64FC1);
         Core.transpose(mRotation,RT);
 
         double[] tVecArray = tvec.toArray();
 
-       /* mGLPose[0] = (float)mRotation.get(0, 0)[0];
-        mGLPose[1] = (float)mRotation.get(1, 0)[0];
-        mGLPose[2] = (float)mRotation.get(2, 0)[0];
-        mGLPose[3] = 0f;
-        mGLPose[4] = (float)mRotation.get(0, 1)[0];
-        mGLPose[5] = (float)mRotation.get(1, 1)[0];
-        mGLPose[6] = (float)mRotation.get(2, 1)[0];
-        mGLPose[7] = 0f;
-        mGLPose[8] = (float)mRotation.get(0, 2)[0];
-        mGLPose[9] = (float)mRotation.get(1, 2)[0];
-        mGLPose[10] = (float)mRotation.get(2, 2)[0];
-        mGLPose[11] = 0f;
-        mGLPose[12] = (float)tVecArray[0];
-        mGLPose[13] = (float)tVecArray[1];
-        mGLPose[14] = (float)tVecArray[2];
-        mGLPose[15] = 1f;*/
+        mGLPose1[0] = (float)mRotation.get(0, 0)[0];
+        mGLPose1[1] = (float)mRotation.get(1, 0)[0];
+        mGLPose1[2] = (float)mRotation.get(2, 0)[0];
+        mGLPose1[3] = 0f;
+        mGLPose1[4] = (float)mRotation.get(0, 1)[0];
+        mGLPose1[5] = (float)mRotation.get(1, 1)[0];
+        mGLPose1[6] = (float)mRotation.get(2, 1)[0];
+        mGLPose1[7] = 0f;
+        mGLPose1[8] = (float)mRotation.get(0, 2)[0];
+        mGLPose1[9] = (float)mRotation.get(1, 2)[0];
+        mGLPose1[10] = (float)mRotation.get(2, 2)[0];
+        mGLPose1[11] = 0f;
+        mGLPose1[12] = (float)tVecArray[0];
+        mGLPose1[13] = (float)tVecArray[1];
+        mGLPose1[14] = (float)tVecArray[2];
+        mGLPose1[15] = 1f;
 
         mGLPose[0] = (float)mRotation.get(0, 0)[0];
         mGLPose[1] = (float)mRotation.get(1, 0)[0];
@@ -893,28 +822,9 @@ public class Procesador {
         Rt.fromArray(mGLPose);
 
 
-        /*for(int i=0; i<3;i++){
-            double[] data = {0.0,0.0,0.0,0.0};
-
-        }*/
-       /* int npixels = (int)RT.total() * (int)RT.elemSize();
-        double[] pixels = new double[npixels];
-        RT.get(0,0,pixels);
-
-        Rt.put(0,0,pixels);
-
-
-        /*double[] data = {0.0,0.0,0.0,0.0};
-        for(int k=0;k<tVecArray.length;k++){
-            data[k]=tVecArray[k];
-        }*/
-
-        //Rt.put(3,0,tVecArray);
 
         Mat resultado = Rt.reshape(1,3);
-        //Imgproc.cvtColor(resultado,resultado,CVType.);
 
-        //Core.multiply(K,resultado,M);
 
 
        Core.gemm(K,resultado,1,Mat.zeros(3,1,CvType.CV_32FC1),0,M);
@@ -922,37 +832,58 @@ public class Procesador {
         Mat aux = new Mat(9,4,CvType.CV_32FC3);
 
         //Matriz de 9/3 a 9/4
-        //double[] l1 = new ArrayList<float>();
 
-        /*for(int i=0;i<p3d.size().height;i++)
-            for(int j=0;j<p3d.size().width;j++){
-                double[] a = p3d.get(i,j);
-                Point3 p = new Point3(a);
-                Log.e("P3D","i j 0 1 |"+i+" " +j+" "+String.valueOf(a[0])+" "+String.valueOf(a[1])+" ");
-            }*/
+
+
 
         //TODO HASTA AQUI TODO BIEN, LUEGO SE VUELVEN LOS PUNTOS MUY PEQUEÑOS
 
+
+
         Calib3d.convertPointsToHomogeneous(p3d3,aux);
+        Mat resul = new Mat();
+
+        Calib3d.convertPointsFromHomogeneous(aux,resul);
+
+
+       /* List<Point3> puntos3d = resul.toList();
+        for (Point3 punto : puntos3d ) {
+            Point3 pp = punto;
+        }*/
+
+        /*int size1 = (int) (resul.total() * resul.channels());
+        float[] temp1 = new float[size1];
+        resul.get(0,0,temp1);*/
+
+
         //reshape
         Mat objHomo = aux.reshape(1);
 
-        int size = (int) (objHomo.total() * objHomo.channels());
-        float[] temp = new float[size];
-        objHomo.get(0,0,temp);
+
 
         //Core.multiply(objHomo,M.t(),objHomo);
         //objHomo.mul(M.t());
-        Core.gemm(objHomo,M.t(),1,Mat.zeros(3,1,CvType.CV_64FC1),0,objHomo);
+        Mat multi = new Mat(3,4,CvType.CV_32FC1);
+        Mat puntos = new Mat(9,2,CvType.CV_32FC1);
+
+        Core.gemm(objHomo,M.t(),1,Mat.zeros(3,1,CvType.CV_64FC1),0,multi);
 
 
-        Calib3d.convertPointsFromHomogeneous(objHomo,aux);
+
+        Calib3d.convertPointsFromHomogeneous(multi,puntos);
+
         Mat GLpose = aux.reshape(1);
 
         //Mat GLPose = new Mat();
+        //Calib3d.pr
+        MatOfPoint2f output = new MatOfPoint2f();
 
-        drawCube(entrada,GLpose);
-        return true;
+        Calib3d.projectPoints(p3d3,rvec,tvec,projection,calibracion,output);
+
+        List<Point> listaOut = output.toList();
+
+        // drawCube(entrada,listaOut);
+        return listaOut;
 
     }
 
