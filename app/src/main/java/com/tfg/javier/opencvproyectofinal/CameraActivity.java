@@ -1,7 +1,6 @@
 package com.tfg.javier.opencvproyectofinal;
 
 import android.app.Activity;
-import android.hardware.Camera;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -22,10 +21,9 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
-import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
-public class MainActivity extends Activity implements CameraBridgeViewBase.CvCameraViewListener2 {
+public class CameraActivity extends Activity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
     private static final String TAG = "OPENCV CAMERA PROYECTO";
 
@@ -83,10 +81,6 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
                             Log.d(TAG, "OpenCV se cargo correctamente");
                             cameraView.setMaxFrameSize(cam_anchura , cam_altura);
                             cameraView.enableView();
-
-
-                            //fxyMap2 = new Mat();
-
                             break;
                         default:
                             super.onManagerConnected(status);
@@ -207,7 +201,7 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
         String msg = "W="+Integer.toString(cam_anchura)+" H="+
                 Integer.toString(cam_altura)+ " Cam ="+
                 Integer.toBinaryString(indiceCamara);
-        Toast.makeText(MainActivity.this,msg,Toast.LENGTH_LONG).show();
+        Toast.makeText(CameraActivity.this,msg,Toast.LENGTH_LONG).show();
         return true;
     }
 
@@ -247,6 +241,7 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
 
+
         inputFrame.rgba().copyTo(_mRgba);
 
         //Mat salida = new Mat();
@@ -273,9 +268,14 @@ public class MainActivity extends Activity implements CameraBridgeViewBase.CvCam
 
         if(processor!=null){
 
+
             Mat intermedio = processor.procesarImagen(_mRgba,modoAlternativo);
             Imgproc.remap(intermedio, salida, processor.getMapaX(), processor.getMapaY(),
-                    Imgproc.INTER_LINEAR, Core.BORDER_TRANSPARENT, s);
+                    Imgproc.INTER_CUBIC, Core.BORDER_REPLICATE, s);
+            //Imgproc.Inter_
+
+
+
         }
 
 

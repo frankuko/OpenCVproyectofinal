@@ -7,7 +7,6 @@
     <org.opencv.android.JavaCameraView
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:id="@+id/vista_camara"
-        opencv:show_fps="true"/>
+        android:id="@+id/vista_camara"/>
 </FrameLayout>
 
