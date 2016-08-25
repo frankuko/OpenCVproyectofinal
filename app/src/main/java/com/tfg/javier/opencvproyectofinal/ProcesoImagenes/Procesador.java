@@ -1,8 +1,5 @@
 package com.tfg.javier.opencvproyectofinal.ProcesoImagenes;
 
-import android.opengl.GLES20;
-import android.os.Debug;
-import android.util.DebugUtils;
 import android.util.Log;
 
 import com.tfg.javier.opencvproyectofinal.adapters.CameraProjectionAdapter;
@@ -12,32 +9,20 @@ import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfFloat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
-import org.opencv.core.MatOfPoint3;
 import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
-import org.opencv.core.Size;
-import org.opencv.core.TermCriteria;
-import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
-import org.opencv.utils.Converters;
-import org.opencv.video.Video;
 
-import java.io.Console;
-import java.io.PipedOutputStream;
-import java.nio.DoubleBuffer;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import java.util.StringTokenizer;
 import java.util.Vector;
 
 /**
@@ -61,6 +46,7 @@ public class Procesador {
    // private org.opencv.core.MatOfPoint3f marcadores;
     private Mat p3d;
     private MatOfPoint3f p3d3;
+    private MatOfPoint3f p3d3Grande;
 
     private Mat K;
 
@@ -97,6 +83,7 @@ public class Procesador {
         mGLPose1 = new float[16];
 
 
+
         /*prevImg = new Mat();
         currImg = new Mat();
         primerFrame = true;
@@ -126,6 +113,17 @@ public class Procesador {
                 new Point3(2,2,6),
                 new Point3(2,1,6),
                 new Point3(2.5,1.5,5.5));
+
+        p3d3Grande = new MatOfPoint3f(new Point3(10,10,50),
+                new Point3(10,20,50),
+                new Point3(20,20,50),
+                new Point3(20,10,50),
+                new Point3(10,10,60),
+                new Point3(10,20,60),
+                new Point3(20,20,60),
+                new Point3(20,10,60),
+                new Point3(25,15,55));
+
 
         //p3d.put(r,c,1,1,5,1,2,5,2,2,5,2,1,5,1,1,6,1,2,6,2,2,6,2,1,6,2.5,1.5,5.5);
 
@@ -193,7 +191,7 @@ public class Procesador {
 
         Point centerRect = new Point();
 
-        //Obtener el punto central del contorno
+        //Obtener el punto central del rectangulo que envuelve a los puntos centrales
         for (int j = 0; j < rectContorno.size(); j++)
         {
 
@@ -209,7 +207,7 @@ public class Procesador {
         Vector<Point> top = new Vector<Point>();
         Vector<Point> bot = new Vector<Point>();
 
-        //puntos cogidos de la parte izquierda, getLeft
+        //puntos cogidos de la parte izquierda, getLeft, el rectangulo
         MatOfPoint2f puntosCentrales2f = new MatOfPoint2f(listaContornos.get(0).getLeft().center,listaContornos.get(1).getLeft().center,
                 listaContornos.get(2).getLeft().center,listaContornos.get(3).getLeft().center);
 
@@ -260,7 +258,7 @@ public class Procesador {
 
     }
 
-    public MatOfPoint2f ordernaEsquinas(MatOfPoint2f corners,Point centro){
+   /* public MatOfPoint2f ordernaEsquinas(MatOfPoint2f corners,Point centro){
 
         Vector<Point> top = new Vector<Point>();
         Vector<Point> bot = new Vector<Point>();
@@ -288,11 +286,11 @@ public class Procesador {
         }
         return result;
 
-    }
+    }*/
 
     public String devolverColorRGB(Mat imagenEntrada, List<Point> pp){
 
-        String r = "| ";
+        String r = " | ";
 
         double maximoBlanco = 0.0;
 
@@ -355,6 +353,7 @@ public class Procesador {
             double balanceAzul = (pixel[2] / pixelBlanco[2]) * 255;
 
 
+
             //Encontrar el maximo de esos 3 y comparar con el adecuado
 
             if(balanceRojo>balanceVerde && balanceRojo>balanceAzul){
@@ -368,13 +367,13 @@ public class Procesador {
             if(balanceVerde>balanceRojo && balanceVerde>balanceAzul){
                 //comprobar verde
 
-                r+="VERDE |";
+                r+="VERDE | ";
 
             }
 
             if(balanceAzul>balanceRojo && balanceAzul>balanceVerde){
                 //comprobar azul
-                r+="AZUL |";
+                r+="AZUL | ";
 
             }
 
@@ -391,7 +390,7 @@ public class Procesador {
 
     }
 
-    public String devolverColor(Mat imagenEntrada, MatOfPoint p){
+    public String devolverColorLab(Mat imagenEntrada, MatOfPoint p){
 
         Mat crop = new Mat(imagenEntrada,Imgproc.boundingRect(p));
         Mat mask = Mat.zeros(crop.rows(),crop.cols(),CvType.CV_8UC1);
@@ -451,6 +450,7 @@ public class Procesador {
         diffAzul = ColorUtil.getColorDifference(media, azul);
         diffBlanco = ColorUtil.getColorDifference(media,blanco);
 
+
         listaDiferencias.add(diffRojo);
         listaDiferencias.add(diffVerde);
         listaDiferencias.add(diffAzul);
@@ -491,7 +491,7 @@ public class Procesador {
 
     }
 
-    public String ordenarColoresRect(Mat imagen, List<RotatedRect> vector){
+    public String ordenarColoresRGB(Mat imagen, List<RotatedRect> vector){
 
 
         String resultado = " | ";
@@ -514,13 +514,13 @@ public class Procesador {
 
 
 
-    public String ordenarColores(Mat imagen, List<MatOfPoint> vector){
+    public String ordenarColoresLab(Mat imagen, List<MatOfPoint> vector){
 
         String resultado = " | ";
 
         for(int i=0;i<vector.size();i++){
             //Core.mean(vector.get(i));
-            String color = devolverColor(imagen,vector.get(i));
+            String color = devolverColorLab(imagen,vector.get(i));
             resultado+=color+" | ";
 
         }
@@ -528,6 +528,22 @@ public class Procesador {
         return resultado;
 
 
+    }
+
+    private String obtenerCodigoPatron(String resultado){
+
+        for(int i=0; i<4; i++){
+
+            resultado = resultado.replace("BLANCO","0");
+
+            resultado =  resultado.replace("ROJO","1");
+
+            resultado = resultado.replace("VERDE","2");
+
+            resultado = resultado.replace("AZUL","3");
+
+        }
+        return resultado;
     }
 
 
@@ -616,14 +632,15 @@ public class Procesador {
             //modo true = punto del centro y el blanco primero
 
             if(!modoAlternativo){
-                res = ordenarColoresRect(entrada,rectContorno);
+                res = ordenarColoresRGB(entrada,rectContorno);
             }
             else{
-                res = ordenarColores(entrada,puntosContorno);
+                res = ordenarColoresLab(entrada,puntosContorno);
 
             }
 
 
+            res = obtenerCodigoPatron(res);
 
             if(!rectContorno.isEmpty() && rectContorno.size()==4){
 
@@ -646,7 +663,7 @@ public class Procesador {
 
                     double fontScale = 200;
                     Scalar color = new Scalar(fontScale);
-                    Point p = new Point(200, 200);
+                    Point puntoCentro = new Point(entrada.cols()/2,entrada.rows()/2);
 
 
                     //EN ESTE PUNTO TENEMOS QUE GUARDAR EL FRAME
@@ -664,26 +681,13 @@ public class Procesador {
                     //Video.calcOpticalFlowPyrLK(prevImg, entrada, puntosCentrales2f, nextPts, status, err);
                     //trackingPoints(prevImg,entrada,puntosCentrales2f,prevPts);
 
-                    List<Point> pos = findPose(entrada,puntosCentrales2f,rvec,tvec,mRotation);
+
+                    List<Point> pos = findPose2(entrada,puntosCentrales2f,rvec,tvec,mRotation,res);
 
                     //Mat H = findPose2(puntosCentrales2f,rvec,tvec);
                     //renderer.GLpose = pos;
-
-                    int [] array = {1,2,3,4,1,5,6,7,8,5,6,2,6,7,3,7,8,4,9,3,7,9,8};
-
-                    for(int i = 1; i<array.length-1; ++i){
-
-                        Point p1 = pos.get(array[i-1]-1);
-                        Point p2 = pos.get(array[i]-1);
-
-                        if(p1.x < 0)
-                            p1.x = -1 * p1.x;
-                        if(p2.x < 0 )
-                            p2.x = -1 * p2.x;
-
-                        Imgproc.line(entrada,p1,p2,new Scalar(0,255,0));
-
-                    }
+                    if(res.equals(" | 0 | 1 | 2 | 3 | ") || res.equals(" | 0 | 3 | 2 | 1 | "))
+                        dibujarCubo(entrada, pos);
 
                     //En este punto tenemos que dibujar los contornos.
                     for (int k = 0; k < puntosContorno.size(); k++)
@@ -691,7 +695,7 @@ public class Procesador {
                     for (int j = 0; j < rectContorno.size(); ++j) {
                         Imgproc.line(entrada, rectContorno.get(j).center, rectContorno.get((j + 1) % rectContorno.size()).center, new Scalar(255, 255, 255));
                     }
-                    Imgproc.putText(entrada, res, p, Core.FONT_HERSHEY_PLAIN, 1, color, 1);
+                    Imgproc.putText(entrada, res, puntoCentro, Core.FONT_HERSHEY_PLAIN, 1, color, 1);
 
 
                     //Imgproc.warpPerspective(entrada,entrada,H,entrada.size());
@@ -707,21 +711,70 @@ public class Procesador {
 
     }
 
+    private void dibujarCubo(Mat entrada, List<Point> pos) {
+        int [] array = {1,2,3,4,1,5,6,7,8,5,6,2,6,7,3,7,8,4,9,3,7,9,8};
 
-    private Mat findPose2(MatOfPoint2f puntosCentrales,MatOfDouble rvec, MatOfDouble tvec){
+        for(int i = 1; i<array.length-1; ++i){
 
-        MatOfPoint2f listaM = new MatOfPoint2f(new Point(0,0),new Point(20,0),new Point(20,20),new Point(0,20));
+            Point p1 = pos.get(array[i-1]-1);
+            Point p2 = pos.get(array[i]-1);
+/*
+            Imgproc.line(entrada,p1,p2,new Scalar(0,255,0));*/
 
-        List<Point> punticos = puntosCentrales.toList();
+            /*Point p1 = pos.get(array[i]-1);
+            Point p2 = pos.get((array[i+1] % array.length)-1);*/
 
-        Mat H = Calib3d.findHomography(listaM,puntosCentrales);
-        //Imgproc.warpPerspective();
+            Imgproc.line(entrada,p1,p2,new Scalar(0,255,0));
 
-        return H;
+        }
+    }
+
+    private Mat calibrarCamara(MatOfPoint2f puntos){
+
+        List<Mat> rvecs = new ArrayList<>();
+        List<Mat> tvecs = new ArrayList<>();
+
+        //Calib3d.calibrate()
+        return null;
     }
 
 
-    private List<Point> findPose(Mat entrada, MatOfPoint2f puntosCentrales, MatOfDouble rvec, MatOfDouble tvec,MatOfDouble mRotation){
+    private List<Point> findPose2(Mat entrada, MatOfPoint2f puntosCentrales,MatOfDouble rvec, MatOfDouble tvec, MatOfDouble mRotation,
+                                  String patron){
+
+        CameraProjectionAdapter mCameraProjectionAdapter = new CameraProjectionAdapter();
+
+        MatOfDouble projection =
+                mCameraProjectionAdapter.getProjectionCV();
+
+        MatOfPoint2f listaM = new MatOfPoint2f(new Point(0,0),new Point(20,0),new Point(20,20),new Point(0,20));
+
+
+        //Mat H = Calib3d.findHomography(listaM,puntosCentrales);
+        if(!Calib3d.solvePnP(marcadores,puntosCentrales,projection,calibracion,rvec,tvec))
+            return null;
+
+        MatOfPoint2f output = new MatOfPoint2f();
+
+
+        //Calib3d.projectPoints(p3d3,rvec,tvec,projection,calibracion,output);
+
+        if (patron.equals(" | 0 | 1 | 2 | 3 | "))
+            Calib3d.projectPoints(p3d3,rvec,tvec,projection,calibracion,output);
+        else if (patron.equals(" | 0 | 3 | 2 | 1 | "))
+            Calib3d.projectPoints(p3d3Grande,rvec,tvec,projection,calibracion,output);
+
+        List<Point> listaOut = output.toList();
+
+
+        return listaOut;
+
+
+    }
+
+
+    private List<Point> findPose(Mat entrada, MatOfPoint2f puntosCentrales, MatOfDouble rvec, MatOfDouble tvec,MatOfDouble mRotation,
+                                 String patron){
        /* final List<Point3> goodReferencePointsList =
                 new ArrayList<Point3>();
 
@@ -878,6 +931,7 @@ public class Procesador {
         //Calib3d.pr
         MatOfPoint2f output = new MatOfPoint2f();
 
+
         Calib3d.projectPoints(p3d3,rvec,tvec,projection,calibracion,output);
 
         List<Point> listaOut = output.toList();
@@ -1010,7 +1064,6 @@ public class Procesador {
                                 cuentaClaros += (pixelInt[0] - 20 > pixelExt[0]) ? 1 : 0;
                                 totalPuntos++;
                             }
-                            //Log.println(Log.ERROR,"PtInt, x|y",String.valueOf(ptInt.x)+" | "+String.valueOf(ptInt.y));
 
                         }
                         Log.println(Log.ERROR,"cuentaClaros, total",String.valueOf(cuentaClaros)+" | "+String.valueOf(totalPuntos));
