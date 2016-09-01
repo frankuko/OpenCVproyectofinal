@@ -1,21 +1,15 @@
 package com.tfg.javier.opencvproyectofinal;
 
 import android.app.Activity;
-import android.graphics.PixelFormat;
-import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import com.tfg.javier.opencvproyectofinal.ProcesoImagenes.Procesador;
-import com.tfg.javier.opencvproyectofinal.adapters.CameraProjectionAdapter;
-import com.tfg.javier.opencvproyectofinal.filtros.ar.ARCubeRenderer;
-import com.tfg.javier.opencvproyectofinal.filtros.ar.SquareRenderer;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
@@ -23,7 +17,6 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
-import org.opencv.core.CvException;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -51,30 +44,19 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
     private int cam_altura_nativa;
 
     private int framecount = 0;
-    private int counter = 0;
-   // Mat fxyMap2;
+
     Procesador processor;
 
     private int indiceCamara; // 0 -> camara trasera y 1 -> camara delantera
 
 
-    //valores originales
-    /*private double k1 = 0.000001;
-    private double k2 = 0.0000000001;*/
-
-    //valores para 960x720
-    /*private double k1 = 0.0000001;
-    private double k2 = 0.0000000005;*/
 
     private double k1 = 2;
     private double k2 = 1;
 
     private boolean modoAlternativo = false;
 
-    private CameraProjectionAdapter mCameraProjectionAdapter;
 
-    //private ARCubeRenderer mARRenderer;
-   // private SquareRenderer squareRenderer;
 
     static {
         if(OpenCVLoader.initDebug()){
@@ -111,7 +93,7 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -137,23 +119,6 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
 
         cameraView.setCameraIndex(indiceCamara);
 
-        //opengl
-        /*GLSurfaceView glSurfaceView = new GLSurfaceView(this);
-        glSurfaceView.getHolder().setFormat(PixelFormat.TRANSPARENT);
-        glSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 0, 0);
-        glSurfaceView.setZOrderOnTop(true);
-        addContentView(glSurfaceView,new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT));*/
-
-        mCameraProjectionAdapter = new CameraProjectionAdapter();
-
-        //mARRenderer = new ARCubeRenderer();
-       // mARRenderer.cameraProjectionAdapter = mCameraProjectionAdapter;
-       // squareRenderer = new SquareRenderer();
-        //mARRenderer.
-
-        //glSurfaceView.setRenderer(mARRenderer);
 
         cameraView.setCvCameraViewListener(this);
 
@@ -186,9 +151,7 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        //super.onCreateOptionsMenu(menu);
-        //menu.clear();
-        // MenuInflater inflater = getMenuInflater();
+
         getMenuInflater().inflate(R.menu.menu,menu);
         return true;
     }
@@ -196,13 +159,7 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()){
-            /*case R.id.cambiarCamara:
-                indiceCamara++;
-                if (indiceCamara == Camera.getNumberOfCameras()){
-                    indiceCamara = 0;
-                }
-                recreate();
-                break;*/
+
             case R.id.modo_normal:
                 modoAlternativo=false;
                 reiniciarResolucion();
@@ -263,6 +220,7 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
         _mRgba = new Mat(cam_altura,cam_anchura, CvType.CV_8UC4);
         salida = new Mat(cam_altura,cam_anchura, CvType.CV_8UC4);
 
+        //Cargamos imagen
         try{
             imagen = Utils.loadResource(this, R.drawable.cardboard, Imgcodecs.CV_LOAD_IMAGE_COLOR);
         }catch (java.io.IOException e){
@@ -283,11 +241,8 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
 
-
         inputFrame.rgba().copyTo(_mRgba);
-        float[] glPose = null;
 
-        //Mat salida = new Mat();
 
         Scalar s = new Scalar(0,0,0);
 
@@ -311,31 +266,12 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
 
         if(processor!=null){
 
-
-            /*Mat intermedio = processor.procesarImagen(_mRgba,modoAlternativo,glPose);
-
-            if(glPose!=null)
-                mARRenderer.GLpose = glPose;
-            else
-                mARRenderer.GLpose = null;*/
-
             Mat intermedio = processor.procesarImagen(_mRgba,modoAlternativo,imagen);
-
-           /* if(glPose!=null)
-                mARRenderer.GLpose = glPose;
-            else
-                mARRenderer.GLpose = null;*/
-
-
             Imgproc.remap(intermedio, salida, processor.getMapaX(), processor.getMapaY(),
                     Imgproc.INTER_CUBIC, Core.BORDER_TRANSPARENT, s);
-            //Imgproc.Inter_
-
 
 
         }
-
-
 
 
         return salida;

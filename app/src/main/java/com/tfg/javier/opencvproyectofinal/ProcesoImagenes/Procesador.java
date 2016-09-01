@@ -2,28 +2,21 @@ package com.tfg.javier.opencvproyectofinal.ProcesoImagenes;
 
 import android.util.Log;
 
-import com.tfg.javier.opencvproyectofinal.CameraActivity;
 import com.tfg.javier.opencvproyectofinal.adapters.CameraProjectionAdapter;
-import com.tfg.javier.opencvproyectofinal.filtros.ar.ARCubeRenderer;
 
-import org.opencv.android.Utils;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
-import org.opencv.core.MatOfFloat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
 import org.opencv.core.Range;
-import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
-import org.opencv.core.Size;
-import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
@@ -41,15 +34,17 @@ public class Procesador {
     private Mat mapaX;
     private Mat mapaY;
 
+    private Mat maximo;
+
     private Mat bordes;
 
-    //private Mat imgBordes;
+
 
     private Mat hierarchy;
 
     private MatOfPoint3f marcadores;
 
-   // private org.opencv.core.MatOfPoint3f marcadores;
+
     private Mat p3d;
     private MatOfPoint3f p3d3;
     private MatOfPoint3f p3d3Grande;
@@ -58,23 +53,6 @@ public class Procesador {
 
     private MatOfDouble calibracion;
 
-    private float[] mGLPose;
-    private float[] mGLPose1;
-    /*private List<MatOfPoint> contornosFinales;
-
-    private boolean primerFrame;
-
-    private Mat prevImg;*/
-    /*private Mat currImg;
-    private MatOfPoint2f prevPts;
-    private MatOfPoint2f nextPts;
-    private MatOfPoint2f safePts;*/
-
-    //Matriz de referencia de la tarjeta
-
-
-
-    //Matriz con unos puntos imaginarios
 
 
     public Procesador(int filas, int columnas){
@@ -82,27 +60,19 @@ public class Procesador {
 
         mapaX = new Mat();
         mapaY = new Mat();
+        maximo = new Mat();
         bordes = new Mat();
         hierarchy = new Mat();
 
-        mGLPose = new float[12];
-        mGLPose1 = new float[16];
 
 
 
-        /*prevImg = new Mat();
-        currImg = new Mat();
-        primerFrame = true;
-        nextPts = new MatOfPoint2f();
-        prevPts = new MatOfPoint2f();
-        safePts = new MatOfPoint2f();*/
-
-        //MARCADORES ES EL TAMAÑO DEL MARCADOR QUE QUEREMOS RECONOCES
-
+        //MARCADORES ES EL MARCADOR QUE QUEREMOS RECONOCER
         marcadores = new MatOfPoint3f(new Point3(0,0,0),new Point3(1,0,0),new Point3(1,1,0),new Point3(0,1,0));
+
         int r = 0;
         int c = 0;
-        //marcadores.put(r,c,0,0,0,20,0,0,0,20,0,20,20,0);
+
 
         //P3D ES LO QUE QUEREMOS DIBUJAR
 
@@ -131,7 +101,6 @@ public class Procesador {
                 new Point3(25,15,55));
 
 
-        //p3d.put(r,c,1,1,5,1,2,5,2,2,5,2,1,5,1,1,6,1,2,6,2,2,6,2,1,6,2.5,1.5,5.5);
 
         //MATRIZ DE CALIBRACION
 
@@ -140,43 +109,6 @@ public class Procesador {
 
 
         calibracion = new MatOfDouble(0.0,0.0,0.0,0.0,0.0);
-        //calibracion.put(r,c,)
-    /*Mat card = (Mat_<double>(4, 3) <<
-            0, 0, 0,
-            20, 0, 0,
-            0,  20, 0,
-            20,  20, 0 );
-
-      Mat p3d = (Mat_<float>(9, 3) <<
-       1, 1, 5,
-       1, 2, 5,
-       2, 2, 5,
-       2, 1, 5,
-       1, 1, 6,
-       1, 2, 6,
-       2, 2, 6,
-       2, 1, 6,
-       2.5, 1.5, 5.5);*/
-
-    }
-
-    void drawCube(Mat dst, List<Point> object){
-        int [] array = {1,2,3,4,1,5,6,7,8,5,6,2,6,7,3,7,8,4,9,3,7,9,8};
-
-        for(int i = 1; i<array.length-1; ++i){
-
-            Point p1 = object.get(array[i-1]-1);
-            Point p2 = object.get(array[i]-1);
-
-            if(p1.x < 0)
-                p1.x = -1 * p1.x;
-            if(p2.x < 0 )
-                p2.x = -1 * p2.x;
-
-            Imgproc.line(dst,p1,p2,new Scalar(0,255,0));
-
-        }
-
 
 
     }
@@ -210,8 +142,6 @@ public class Procesador {
 
 
 
-        Vector<Point> top = new Vector<Point>();
-        Vector<Point> bot = new Vector<Point>();
 
         //puntos cogidos de la parte izquierda, getLeft, el rectangulo
         MatOfPoint2f puntosCentrales2f = new MatOfPoint2f(listaContornos.get(0).getLeft().center,listaContornos.get(1).getLeft().center,
@@ -259,35 +189,6 @@ public class Procesador {
 
     }
 
-   /* public MatOfPoint2f ordernaEsquinas(MatOfPoint2f corners,Point centro){
-
-        Vector<Point> top = new Vector<Point>();
-        Vector<Point> bot = new Vector<Point>();
-        List<Point> listaPuntos = corners.toList();
-        MatOfPoint2f result = new MatOfPoint2f();
-        for (int i = 0; i < corners.size().height; i++)
-        {
-            if (listaPuntos.get(i).y < centro.y)
-                top.add(listaPuntos.get(i));
-            else
-                bot.add(listaPuntos.get(i));
-
-        }
-
-        //Comprueba que en la lista de vectores de top hay 2 puntos y en la lista de bot hay 2
-        if (top.size() == 2 && bot.size() == 2){
-            //corners.release();
-
-            Point tl = top.get(0).x > top.get(1).x ? top.get(1) : top.get(0);
-            Point tr = top.get(0).x > top.get(1).x ? top.get(0) : top.get(1);
-            Point bl = bot.get(0).x > bot.get(1).x ? bot.get(1) : bot.get(0);
-            Point br = bot.get(0).x > bot.get(1).x ? bot.get(0) : bot.get(1);
-            result = new MatOfPoint2f(tl,tr,br,bl);
-
-        }
-        return result;
-
-    }*/
 
     public String devolverColorRGB(Mat imagenEntrada, List<Point> pp){
 
@@ -311,8 +212,6 @@ public class Procesador {
 
 
         }
-
-
 
 
         //Creamos una lista con todos los puntos menos el blanco
@@ -359,28 +258,25 @@ public class Procesador {
 
             if(balanceRojo>balanceVerde && balanceRojo>balanceAzul){
 
-                //comprobar rojo
+
                 r+="ROJO | ";
-                //continue;
+
 
             }
 
             if(balanceVerde>balanceRojo && balanceVerde>balanceAzul){
-                //comprobar verde
+
 
                 r+="VERDE | ";
 
             }
 
             if(balanceAzul>balanceRojo && balanceAzul>balanceVerde){
-                //comprobar azul
                 r+="AZUL | ";
 
             }
 
 
-
-            //Log.println(Log.ERROR,"Color ",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
 
 
         }
@@ -396,7 +292,7 @@ public class Procesador {
         Mat crop = new Mat(imagenEntrada,Imgproc.boundingRect(p));
         Mat mask = Mat.zeros(crop.rows(),crop.cols(),CvType.CV_8UC1);
 
-        //Imgproc.cvtColor(crop,crop,Imgproc.COLOR_RGB2Lab);
+
 
 
         Point topLeft = Imgproc.boundingRect(p).tl();
@@ -413,16 +309,9 @@ public class Procesador {
 
 
 
-
-        Log.println(Log.ERROR,"Devolviendo media",String.valueOf(media));
-
+        double[] pixel = media.val;
 
 
-        double[] pixel = media.val;//imagenEntrada.get((int) p.y, (int) p.x);
-
-        //r = pixel[0]
-        //g = pixel[1]
-        //b = pixel[2]
 
         List<Double> listaDiferencias = new ArrayList<Double>();
 
@@ -432,8 +321,6 @@ public class Procesador {
         int verde = ColorUtil.argb(0,255,0);
         int azul = ColorUtil.argb(0,0,255);
         int blanco = ColorUtil.argb(255,255,255);
-
-        int colorMedio = ColorUtil.argb((int)pixel[0],(int)pixel[1],(int)pixel[2],(int)pixel[3]);
 
 
 
@@ -484,8 +371,6 @@ public class Procesador {
         }
 
 
-
-
         Log.println(Log.ERROR,"Devolviendo sin color",String.valueOf(pixel[0])+" "+String.valueOf(pixel[1])+" "+String.valueOf(pixel[2]));
         return "SIN COLOR";
 
@@ -495,8 +380,6 @@ public class Procesador {
     public String ordenarColoresRGB(Mat imagen, List<RotatedRect> vector){
 
 
-        String resultado = " | ";
-
         List<Point> puntosContornos = new ArrayList<Point>();
 
 
@@ -504,7 +387,6 @@ public class Procesador {
 
             puntosContornos.add(vector.get(i).center);
 
-            //resultado+=color+" | ";
 
         }
 
@@ -520,7 +402,6 @@ public class Procesador {
         String resultado = " | ";
 
         for(int i=0;i<vector.size();i++){
-            //Core.mean(vector.get(i));
             String color = devolverColorLab(imagen,vector.get(i));
             resultado+=color+" | ";
 
@@ -531,7 +412,13 @@ public class Procesador {
 
     }
 
+    /**
+     * Metodo para sustituir el código de colores obtenido por un código númerico.
+     * @param resultado Cadena de texto con los nombres de los colores
+     * @return Cadena transformada con el patrón convertido en números.
+     */
     private String obtenerCodigoPatron(String resultado){
+
 
         for(int i=0; i<4; i++){
 
@@ -550,41 +437,31 @@ public class Procesador {
 
 
 
-    public Mat procesaGris(Mat entrada){
-        List<Mat> lista = new ArrayList<Mat>(4) ;
-        Core.split(entrada,lista);
-        Mat maximo = new Mat();
-
-        //lista.get(0).copyTo(maximo);
-        Core.max(lista.get(0),lista.get(1),maximo);
-        Core.max(maximo,lista.get(2),maximo);
-        //for(int i=1;i<lista.size()-1;i++)
-        for(int umbral=500;umbral>200;umbral-=100){
-            Imgproc.Canny(maximo,bordes,200,umbral,3,true);
-            if(Core.norm(bordes, Core.NORM_L1)/255>400)
-                break;
-        }
-
-        return bordes;
-    }
-
+    /**
+     * Metodo procesarImagen. Se encarga de detectar los contornos y de llamar a los metodos para seleccionarlos. Finalmente muestra en pantalla el resultado
+     * @param entrada Imagen de entrada.
+     * @param modoAlternativo Modo de procesamiento de color.
+     * @param image Textura que deseamos pintar si lo hacemos
+     * @return La imagen procesada
+     */
     public Mat procesarImagen(Mat entrada,boolean modoAlternativo, Mat image) {
-
-
 
 
         //Probar a inicializar en el constructor
         List<Mat> lista = new ArrayList<Mat>(4) ;
         Core.split(entrada,lista);
-        Mat maximo = new Mat();
+
 
 
         Core.max(lista.get(0),lista.get(1),maximo);
         Core.max(maximo,lista.get(2),maximo); //en lista de 0 tenemos el maximo de los 3 colores GRISES
 
+        for (Mat mm: lista) {
+            mm.release();
+        }
 
 
-// 3. Aplicar el detector de Canny, bajando umbral hasta tener suficientes bordes
+        //Aplicar el detector de Canny, bajando umbral hasta tener suficientes bordes
         for(int umbral=500;umbral>200;umbral-=100){
             Imgproc.Canny(maximo,bordes,200,umbral,3,true);
             if(Core.norm(bordes, Core.NORM_L1)/255>400)
@@ -678,10 +555,9 @@ public class Procesador {
 
                     findPose3(entrada,puntosCentrales2f,image);
 
-                    //Mat H = findPose2(puntosCentrales2f,rvec,tvec);
-                    //renderer.GLpose = pos;
+
                     if(res.equals(" | 0 | 3 | 2 | 1 | ")){
-                        List<Point> pos = findPose2(entrada,puntosCentrales2f,rvec,tvec,mRotation,res);
+                        List<Point> pos = findPose2(puntosCentrales2f,rvec,tvec,res);
                         dibujarCubo(entrada, pos);
                     }
 
@@ -695,14 +571,13 @@ public class Procesador {
                     Imgproc.putText(entrada, res, puntoCentro, Core.FONT_HERSHEY_PLAIN, 1, color, 1);
 
 
-                    //Imgproc.warpPerspective(entrada,entrada,H,entrada.size());
+
                 }
 
             }
 
         }
-        /*if(glPose!=null)
-            Log.e("Valor de glpose 0 :",String.valueOf(glPose[0])) ;*/
+
         return entrada;
 
 
@@ -715,25 +590,14 @@ public class Procesador {
 
             Point p1 = pos.get(array[i-1]-1);
             Point p2 = pos.get(array[i]-1);
-/*
-            Imgproc.line(entrada,p1,p2,new Scalar(0,255,0));*/
 
-            /*Point p1 = pos.get(array[i]-1);
-            Point p2 = pos.get((array[i+1] % array.length)-1);*/
 
             Imgproc.line(entrada,p1,p2,new Scalar(0,255,0));
 
         }
     }
 
-    private Mat calibrarCamara(MatOfPoint2f puntos){
 
-        List<Mat> rvecs = new ArrayList<>();
-        List<Mat> tvecs = new ArrayList<>();
-
-        //Calib3d.calibrate()
-        return null;
-    }
 
     private void findPose3(Mat entrada, MatOfPoint2f puntosCentrales,  Mat image){
 
@@ -742,39 +606,29 @@ public class Procesador {
         int imageHeight = image.height();
 
         List<Point> lista = puntosCentrales.toList();
-        Range colRange = new Range((int)lista.get(0).x,(int)lista.get(1).x);
-        Range rowRange = new Range((int)lista.get(1).y,(int)lista.get(2).y);
+        /*Range colRange = new Range((int)lista.get(0).x,(int)lista.get(1).x);
+        Range rowRange = new Range((int)lista.get(1).y,(int)lista.get(2).y);*/
 
         //Creamos una submatriz a partir de los puntos de los marcadores
-        Mat submatEntrada = entrada.submat(rowRange,colRange);
+        //Mat submatEntrada = entrada.submat(rowRange,colRange);
 
-        //Imgproc.resize(submatEntrada,submatEntrada,image.size());
 
         //Redimensionamos la imagen al tamaño de la submatriz
-       // Imgproc.resize(image,image,submatEntrada.size());
 
         //Calculamos la homografia con los puntos
+
+
         MatOfPoint2f listaM = new MatOfPoint2f(new Point(0,0),new Point(imageWidth,0),new Point(imageWidth,imageHeight),new Point(0,imageHeight));
-
-
 
         Mat C = Imgproc.getPerspectiveTransform(listaM,puntosCentrales);
 
-        //Mat H = Calib3d.findHomography(listaM,puntosCentrales);
-
-
-
         //Llamamos a la función warpPerspective con la imagen y la homografia, guardamos resultado en temp
-        Mat temp = new Mat();
-        //Imgproc.warpPerspective(image,entrada,C,entrada.size());
+        //Mat temp = new Mat();
 
-        Imgproc.warpPerspective(image,temp,C,entrada.size(),Imgproc.INTER_LINEAR,Core.BORDER_TRANSPARENT,new Scalar(255,0,0));
+        Imgproc.warpPerspective(image,entrada,C,entrada.size(),Imgproc.INTER_LINEAR,Core.BORDER_TRANSPARENT,new Scalar(255,0,0));
 
 
-       /* Mat mask = new Mat( new Size( entrada.cols(), entrada.rows() ), CvType.CV_8UC1 );
-        mask.setTo( new Scalar( 0.0 ) );*/
-
-        temp.copyTo(entrada/*,mask*/);
+       // temp.copyTo(entrada);
 
 
 
@@ -784,25 +638,19 @@ public class Procesador {
 
     }
 
-    private List<Point> findPose2(Mat entrada, MatOfPoint2f puntosCentrales,MatOfDouble rvec, MatOfDouble tvec, MatOfDouble mRotation,
-                                  String patron){
+    private List<Point> findPose2(MatOfPoint2f puntosCentrales,MatOfDouble rvec, MatOfDouble tvec,String patron){
 
         CameraProjectionAdapter mCameraProjectionAdapter = new CameraProjectionAdapter();
 
         MatOfDouble projection =
                 mCameraProjectionAdapter.getProjectionCV();
 
-        MatOfPoint2f listaM = new MatOfPoint2f(new Point(0,0),new Point(1,0),new Point(1,1),new Point(0,1));
 
-
-        //Mat H = Calib3d.findHomography(listaM,puntosCentrales);
         if(!Calib3d.solvePnP(marcadores,puntosCentrales,projection,calibracion,rvec,tvec))
             return null;
 
         MatOfPoint2f output = new MatOfPoint2f();
 
-
-        //Calib3d.projectPoints(p3d3,rvec,tvec,projection,calibracion,output);
 
         if (patron.equals(" | 0 | 1 | 2 | 3 | "))
             Calib3d.projectPoints(p3d3,rvec,tvec,projection,calibracion,output);
@@ -817,170 +665,6 @@ public class Procesador {
 
     }
 
-
-    private List<Point> findPose(Mat entrada, MatOfPoint2f puntosCentrales, MatOfDouble rvec, MatOfDouble tvec,MatOfDouble mRotation,
-                                 String patron){
-       /* final List<Point3> goodReferencePointsList =
-                new ArrayList<Point3>();
-
-        final ArrayList<Point> goodScenePointsList =
-                new ArrayList<Point>();*/
-
-        //marcadores son los puntos de referencia
-
-
-
-        CameraProjectionAdapter mCameraProjectionAdapter = new CameraProjectionAdapter();
-
-
-        //todo añadir puntos
-
-        /*final MatOfPoint3f goodReferencePoints = new MatOfPoint3f();
-        goodReferencePoints.fromList(goodReferencePointsList);
-
-        final MatOfPoint2f goodScenePoints = new MatOfPoint2f();
-        goodScenePoints.fromList(goodScenePointsList);*/
-
-        MatOfDouble projection =
-                mCameraProjectionAdapter.getProjectionCV();
-
-
-        if(!Calib3d.solvePnP(marcadores,puntosCentrales,projection,calibracion,rvec,tvec))
-            return null;
-
-
-
-        double[] rVecArray = rvec.toArray();
-        MatOfDouble rvec2 = new MatOfDouble();
-
-        rVecArray[1] *= -1.0;
-        rVecArray[2] *= -1.0;
-        rvec2.fromArray(rVecArray);
-
-        Calib3d.Rodrigues(rvec2,mRotation);
-
-        MatOfDouble RT = new MatOfDouble(1,3,CvType.CV_64FC1);
-        Core.transpose(mRotation,RT);
-
-        double[] tVecArray = tvec.toArray();
-
-        mGLPose1[0] = (float)mRotation.get(0, 0)[0];
-        mGLPose1[1] = (float)mRotation.get(1, 0)[0];
-        mGLPose1[2] = (float)mRotation.get(2, 0)[0];
-        mGLPose1[3] = 0f;
-        mGLPose1[4] = (float)mRotation.get(0, 1)[0];
-        mGLPose1[5] = (float)mRotation.get(1, 1)[0];
-        mGLPose1[6] = (float)mRotation.get(2, 1)[0];
-        mGLPose1[7] = 0f;
-        mGLPose1[8] = (float)mRotation.get(0, 2)[0];
-        mGLPose1[9] = (float)mRotation.get(1, 2)[0];
-        mGLPose1[10] = (float)mRotation.get(2, 2)[0];
-        mGLPose1[11] = 0f;
-        mGLPose1[12] = (float)tVecArray[0];
-        mGLPose1[13] = (float)tVecArray[1];
-        mGLPose1[14] = (float)tVecArray[2];
-        mGLPose1[15] = 1f;
-
-        mGLPose[0] = (float)mRotation.get(0, 0)[0];
-        mGLPose[1] = (float)mRotation.get(1, 0)[0];
-        mGLPose[2] = (float)mRotation.get(2, 0)[0];
-        mGLPose[3] = (float)mRotation.get(0, 1)[0];
-        mGLPose[4] = (float)mRotation.get(1, 1)[0];
-        mGLPose[5] = (float)mRotation.get(2, 1)[0];
-        mGLPose[6] = (float)mRotation.get(0, 2)[0];
-        mGLPose[7] = (float)mRotation.get(1, 2)[0];
-        mGLPose[8] = (float)mRotation.get(2, 2)[0];
-        mGLPose[9] = (float)tVecArray[0];
-        mGLPose[10] = (float)tVecArray[1];
-        mGLPose[11] = (float)tVecArray[2];
-
-
-        //Mat C (Mat_<double>(3, 1));
-
-        MatOfDouble C = new MatOfDouble(3,1,CvType.CV_64FC1);
-
-//multiplica RT con Tvec y lo guarda en C
-        Core.gemm(RT,tvec,1,Mat.zeros(3,1,CvType.CV_64FC1),0,C);
-
-
-
-
-
-
-        //escalado = escalado * rot1(30.0) ;
-        //M = K*Rt*rot1*escalado;
-
-        //añadir a Rt los valores de RT y los de Tvec
-
-        Mat M = new Mat(3,4,CvType.CV_32FC1);
-
-        //Mat Rt = new Mat(3,4,CvType.CV_32FC4);
-
-        MatOfFloat Rt = new MatOfFloat();
-        Rt.fromArray(mGLPose);
-
-
-
-        Mat resultado = Rt.reshape(1,3);
-
-
-
-       Core.gemm(K,resultado,1,Mat.zeros(3,1,CvType.CV_32FC1),0,M);
-
-        Mat aux = new Mat(9,4,CvType.CV_32FC3);
-
-        //Matriz de 9/3 a 9/4
-
-
-
-
-        Calib3d.convertPointsToHomogeneous(p3d3,aux);
-        Mat resul = new Mat();
-
-        Calib3d.convertPointsFromHomogeneous(aux,resul);
-
-
-       /* List<Point3> puntos3d = resul.toList();
-        for (Point3 punto : puntos3d ) {
-            Point3 pp = punto;
-        }*/
-
-        /*int size1 = (int) (resul.total() * resul.channels());
-        float[] temp1 = new float[size1];
-        resul.get(0,0,temp1);*/
-
-
-        //reshape
-        Mat objHomo = aux.reshape(1);
-
-
-
-        //Core.multiply(objHomo,M.t(),objHomo);
-        //objHomo.mul(M.t());
-        Mat multi = new Mat(3,4,CvType.CV_32FC1);
-        Mat puntos = new Mat(9,2,CvType.CV_32FC1);
-
-        Core.gemm(objHomo,M.t(),1,Mat.zeros(3,1,CvType.CV_64FC1),0,multi);
-
-
-
-        Calib3d.convertPointsFromHomogeneous(multi,puntos);
-
-        Mat GLpose = aux.reshape(1);
-
-        //Mat GLPose = new Mat();
-        //Calib3d.pr
-        MatOfPoint2f output = new MatOfPoint2f();
-
-
-        Calib3d.projectPoints(p3d3,rvec,tvec,projection,calibracion,output);
-
-        List<Point> listaOut = output.toList();
-
-        // drawCube(entrada,listaOut);
-        return listaOut;
-
-    }
 
     /**
      * Metodo reducir candidatos. Si tenemos más de 4 contornos en la lista debemos de quedarnos con los más grandes
