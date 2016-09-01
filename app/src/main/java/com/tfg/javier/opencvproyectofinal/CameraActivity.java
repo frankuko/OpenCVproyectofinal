@@ -21,12 +21,14 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvException;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 public class CameraActivity extends Activity implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -39,6 +41,8 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
 
     Mat _mRgba;
     Mat salida;
+
+    Mat imagen;
 
     private int cam_anchura = 800; // 960 x 720
     private int cam_altura = 600;
@@ -69,8 +73,8 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
 
     private CameraProjectionAdapter mCameraProjectionAdapter;
 
-    private ARCubeRenderer mARRenderer;
-    private SquareRenderer squareRenderer;
+    //private ARCubeRenderer mARRenderer;
+   // private SquareRenderer squareRenderer;
 
     static {
         if(OpenCVLoader.initDebug()){
@@ -134,22 +138,22 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
         cameraView.setCameraIndex(indiceCamara);
 
         //opengl
-        GLSurfaceView glSurfaceView = new GLSurfaceView(this);
+        /*GLSurfaceView glSurfaceView = new GLSurfaceView(this);
         glSurfaceView.getHolder().setFormat(PixelFormat.TRANSPARENT);
         glSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 0, 0);
         glSurfaceView.setZOrderOnTop(true);
         addContentView(glSurfaceView,new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT));
+                FrameLayout.LayoutParams.MATCH_PARENT));*/
 
         mCameraProjectionAdapter = new CameraProjectionAdapter();
 
-        mARRenderer = new ARCubeRenderer();
-        mARRenderer.cameraProjectionAdapter = mCameraProjectionAdapter;
+        //mARRenderer = new ARCubeRenderer();
+       // mARRenderer.cameraProjectionAdapter = mCameraProjectionAdapter;
        // squareRenderer = new SquareRenderer();
         //mARRenderer.
 
-        glSurfaceView.setRenderer(mARRenderer);
+        //glSurfaceView.setRenderer(mARRenderer);
 
         cameraView.setCvCameraViewListener(this);
 
@@ -259,6 +263,13 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
         _mRgba = new Mat(cam_altura,cam_anchura, CvType.CV_8UC4);
         salida = new Mat(cam_altura,cam_anchura, CvType.CV_8UC4);
 
+        try{
+            imagen = Utils.loadResource(this, R.drawable.cardboard, Imgcodecs.CV_LOAD_IMAGE_COLOR);
+        }catch (java.io.IOException e){
+            Log.e("Excepción con fichero", "No se pudo cargar el fichero de la imagen");
+        }
+
+
     }
 
     @Override
@@ -308,7 +319,7 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
             else
                 mARRenderer.GLpose = null;*/
 
-            Mat intermedio = processor.procesarImagen(_mRgba,modoAlternativo,mARRenderer);
+            Mat intermedio = processor.procesarImagen(_mRgba,modoAlternativo,imagen);
 
            /* if(glPose!=null)
                 mARRenderer.GLpose = glPose;

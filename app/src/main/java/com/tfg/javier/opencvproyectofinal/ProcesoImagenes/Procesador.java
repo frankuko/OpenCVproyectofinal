@@ -2,9 +2,11 @@ package com.tfg.javier.opencvproyectofinal.ProcesoImagenes;
 
 import android.util.Log;
 
+import com.tfg.javier.opencvproyectofinal.CameraActivity;
 import com.tfg.javier.opencvproyectofinal.adapters.CameraProjectionAdapter;
 import com.tfg.javier.opencvproyectofinal.filtros.ar.ARCubeRenderer;
 
+import org.opencv.android.Utils;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -16,8 +18,12 @@ import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
+import org.opencv.core.Range;
+import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
@@ -93,7 +99,7 @@ public class Procesador {
 
         //MARCADORES ES EL TAMAÑO DEL MARCADOR QUE QUEREMOS RECONOCES
 
-        marcadores = new MatOfPoint3f(new Point3(0,0,0),new Point3(20,0,0),new Point3(20,20,0),new Point3(0,20,0));
+        marcadores = new MatOfPoint3f(new Point3(0,0,0),new Point3(1,0,0),new Point3(1,1,0),new Point3(0,1,0));
         int r = 0;
         int c = 0;
         //marcadores.put(r,c,0,0,0,20,0,0,0,20,0,20,20,0);
@@ -230,7 +236,6 @@ public class Procesador {
 
         //Comprueba que en la lista de vectores de top hay 2 puntos y en la lista de bot hay 2
         if (resultTop.size() == 2 && resultBot.size() == 2){
-            //corners.release();
 
             Pair<RotatedRect,MatOfPoint> tl =
                     resultTop.get(0).getLeft().center.x > resultTop.get(1).getLeft().center.x ? resultTop.get(1) : resultTop.get(0);
@@ -247,10 +252,6 @@ public class Procesador {
             result.add(1,tr);
             result.add(2,br);
             result.add(3,bl);
-            /*corners.push_back(tl);
-            corners.push_back(tr);
-            corners.push_back(br);
-            corners.push_back(bl);*/
 
         }
 
@@ -567,7 +568,7 @@ public class Procesador {
         return bordes;
     }
 
-    public Mat procesarImagen(Mat entrada,boolean modoAlternativo,ARCubeRenderer renderer) {
+    public Mat procesarImagen(Mat entrada,boolean modoAlternativo, Mat image) {
 
 
 
@@ -666,28 +667,24 @@ public class Procesador {
                     Point puntoCentro = new Point(entrada.cols()/2,entrada.rows()/2);
 
 
-                    //EN ESTE PUNTO TENEMOS QUE GUARDAR EL FRAME
-                    /*if(!primerFrame){
-                        Mat prevImg = entrada;
-                    }*/
 
 
-                    //MatOfByte status = new MatOfByte();
-                   // MatOfFloat err = new MatOfFloat();
-                    //TODO GUARDAR PUNTOS CENTRALES2F
-
-                    //TODO TENEMOS LOS PUNTOSCENTRALES2F, QUE SON LOS PUNTOS DEL FRAME Y TENEMOS QUE CALCULAR LOS SIGUIENTES
-                    //TODO IDEA, DESPUES DE ESTO GUARDAR LOS PUNTOSCENTRALES EN VARIABLE GLOBAL PARA COMPROBAR AL PRINCIPIO DEL METODO
-                    //Video.calcOpticalFlowPyrLK(prevImg, entrada, puntosCentrales2f, nextPts, status, err);
-                    //trackingPoints(prevImg,entrada,puntosCentrales2f,prevPts);
 
 
-                    List<Point> pos = findPose2(entrada,puntosCentrales2f,rvec,tvec,mRotation,res);
+
+
+
+
+
+                    findPose3(entrada,puntosCentrales2f,image);
 
                     //Mat H = findPose2(puntosCentrales2f,rvec,tvec);
                     //renderer.GLpose = pos;
-                    if(res.equals(" | 0 | 1 | 2 | 3 | ") || res.equals(" | 0 | 3 | 2 | 1 | "))
+                    if(res.equals(" | 0 | 3 | 2 | 1 | ")){
+                        List<Point> pos = findPose2(entrada,puntosCentrales2f,rvec,tvec,mRotation,res);
                         dibujarCubo(entrada, pos);
+                    }
+
 
                     //En este punto tenemos que dibujar los contornos.
                     for (int k = 0; k < puntosContorno.size(); k++)
@@ -738,6 +735,54 @@ public class Procesador {
         return null;
     }
 
+    private void findPose3(Mat entrada, MatOfPoint2f puntosCentrales,  Mat image){
+
+
+        int imageWidth = image.width();
+        int imageHeight = image.height();
+
+        List<Point> lista = puntosCentrales.toList();
+        Range colRange = new Range((int)lista.get(0).x,(int)lista.get(1).x);
+        Range rowRange = new Range((int)lista.get(1).y,(int)lista.get(2).y);
+
+        //Creamos una submatriz a partir de los puntos de los marcadores
+        Mat submatEntrada = entrada.submat(rowRange,colRange);
+
+        //Imgproc.resize(submatEntrada,submatEntrada,image.size());
+
+        //Redimensionamos la imagen al tamaño de la submatriz
+       // Imgproc.resize(image,image,submatEntrada.size());
+
+        //Calculamos la homografia con los puntos
+        MatOfPoint2f listaM = new MatOfPoint2f(new Point(0,0),new Point(imageWidth,0),new Point(imageWidth,imageHeight),new Point(0,imageHeight));
+
+
+
+        Mat C = Imgproc.getPerspectiveTransform(listaM,puntosCentrales);
+
+        //Mat H = Calib3d.findHomography(listaM,puntosCentrales);
+
+
+
+        //Llamamos a la función warpPerspective con la imagen y la homografia, guardamos resultado en temp
+        Mat temp = new Mat();
+        //Imgproc.warpPerspective(image,entrada,C,entrada.size());
+
+        Imgproc.warpPerspective(image,temp,C,entrada.size(),Imgproc.INTER_LINEAR,Core.BORDER_TRANSPARENT,new Scalar(255,0,0));
+
+
+       /* Mat mask = new Mat( new Size( entrada.cols(), entrada.rows() ), CvType.CV_8UC1 );
+        mask.setTo( new Scalar( 0.0 ) );*/
+
+        temp.copyTo(entrada/*,mask*/);
+
+
+
+
+
+
+
+    }
 
     private List<Point> findPose2(Mat entrada, MatOfPoint2f puntosCentrales,MatOfDouble rvec, MatOfDouble tvec, MatOfDouble mRotation,
                                   String patron){
@@ -747,7 +792,7 @@ public class Procesador {
         MatOfDouble projection =
                 mCameraProjectionAdapter.getProjectionCV();
 
-        MatOfPoint2f listaM = new MatOfPoint2f(new Point(0,0),new Point(20,0),new Point(20,20),new Point(0,20));
+        MatOfPoint2f listaM = new MatOfPoint2f(new Point(0,0),new Point(1,0),new Point(1,1),new Point(0,1));
 
 
         //Mat H = Calib3d.findHomography(listaM,puntosCentrales);
@@ -889,10 +934,6 @@ public class Procesador {
 
 
 
-        //TODO HASTA AQUI TODO BIEN, LUEGO SE VUELVEN LOS PUNTOS MUY PEQUEÑOS
-
-
-
         Calib3d.convertPointsToHomogeneous(p3d3,aux);
         Mat resul = new Mat();
 
@@ -953,18 +994,21 @@ public class Procesador {
         double tam2 = 0.0;
         double tam3 = 0.0;
 
+        Pair<RotatedRect,MatOfPoint> par0 = new Pair<RotatedRect,MatOfPoint>();
+        Pair<RotatedRect,MatOfPoint> par1 = new Pair<RotatedRect,MatOfPoint>();
+        Pair<RotatedRect,MatOfPoint> par2 = new Pair<RotatedRect,MatOfPoint>();
+        Pair<RotatedRect,MatOfPoint> par3 = new Pair<RotatedRect,MatOfPoint>();
+
+        List<Pair<RotatedRect,MatOfPoint>> listaBorrar = new ArrayList<Pair<RotatedRect,MatOfPoint>>();
+
+
 
         Log.println(Log.ERROR,"tamano lista",String.valueOf(listaContornos.size()));
         while (it.hasNext()){
             Log.println(Log.ERROR,"tamano lista",String.valueOf(listaContornos.size()));
             Pair<RotatedRect,MatOfPoint> v = it.next();
-            if(v.getLeft().angle>10 && v.getLeft().angle<165){
-               // it.remove();
-                Log.println(Log.ERROR,"borramos lista",String.valueOf(listaContornos.size()));
-                //listaContornos.
-            }
 
-            else if(listaContornos.size()>4) {
+            if(listaContornos.size()>4) {
 
                     if(v.getLeft().size.area()>tam0){
                         //tenemos un nuevo valor mayor
@@ -972,32 +1016,63 @@ public class Procesador {
                         tam2=tam1;
                         tam1=tam0;
                         tam0=v.getLeft().size.area();
+
+                        //borramos el contorno de la lista.
+                        if(!par3.equals(new Pair<RotatedRect,MatOfPoint>()))
+                            listaBorrar.add(par3);
+                        par3=par2;
+                        par2=par1;
+                        par1=par0;
+                        par0=v;
+
                     }
                     else
                         if(v.getLeft().size.area()>tam1){
                             tam3=tam2;
                             tam2=tam1;
                             tam1=v.getLeft().size.area();
+
+                            if(!par3.equals(new Pair<RotatedRect,MatOfPoint>()))
+                                listaBorrar.add(par3);
+                            par3=par2;
+                            par2=par1;
+                            par1=v;
                         }
 
                         else
                             if(v.getLeft().size.area()>tam2){
                                 tam3=tam2;
                                 tam2 = v.getLeft().size.area();
+
+                                if(!par3.equals(new Pair<RotatedRect,MatOfPoint>()))
+                                    listaBorrar.add(par3);
+                                par3=par2;
+                                par2 = v;
                             }
 
                             else
-                                if(v.getLeft().size.area()>tam3)
+                                if(v.getLeft().size.area()>tam3){
                                     tam3 = v.getLeft().size.area();
-                                else{
+
+                                    if(!par3.equals(new Pair<RotatedRect,MatOfPoint>()))
+                                        listaBorrar.add(par3);
+                                    par3=v;
+                                }
+
+                                /*else{
                                     Log.println(Log.ERROR,"borramos lista",String.valueOf(listaContornos.size()));
                                     it.remove();
-                                }
+                                }*/
 
                   }
 
 
 
+        }
+
+        for (Pair<RotatedRect,MatOfPoint> par :listaBorrar) {
+            if(!par.equals(new Pair<RotatedRect,MatOfPoint>()))
+                listaContornos.remove(par);
         }
         Log.println(Log.ERROR,"Candidatos",String.valueOf(listaContornos.size()));
     }
