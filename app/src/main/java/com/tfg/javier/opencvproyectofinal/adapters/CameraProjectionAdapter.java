@@ -13,8 +13,8 @@ import org.opencv.core.MatOfDouble;
 public class CameraProjectionAdapter {
 
     //parametros por defecto de camara
-    float mFOVY = 43.6f;
-    float mFOVX = 65.4f;
+    float mFOVY = 37.4f;
+    float mFOVX = 58.9f;
 
     int mHeightPx = 800;
     int mWidthPx = 480;

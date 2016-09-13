@@ -14,7 +14,6 @@ import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
-import org.opencv.core.Range;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
@@ -35,7 +34,6 @@ public class Procesador {
     private Mat mapaY;
 
     private Mat maximo;
-
     private Mat bordes;
 
 
@@ -43,13 +41,9 @@ public class Procesador {
     private Mat hierarchy;
 
     private MatOfPoint3f marcadores;
-
-
-    private Mat p3d;
     private MatOfPoint3f p3d3;
     private MatOfPoint3f p3d3Grande;
 
-    private Mat K;
 
     private MatOfDouble calibracion;
 
@@ -70,15 +64,10 @@ public class Procesador {
         //MARCADORES ES EL MARCADOR QUE QUEREMOS RECONOCER
         marcadores = new MatOfPoint3f(new Point3(0,0,0),new Point3(1,0,0),new Point3(1,1,0),new Point3(0,1,0));
 
-        int r = 0;
-        int c = 0;
 
 
         //P3D ES LO QUE QUEREMOS DIBUJAR
 
-        p3d = new Mat(9,3,CvType.CV_32FC3);
-
-        p3d.put(r,c,1,1,5,1,2,5,2,2,5,2,1,5,1,1,6,1,2,6,2,2,6,2,1,6,2.5,1.5,5.5);
 
         p3d3 = new MatOfPoint3f(new Point3(1,1,5),
                 new Point3(1,2,5),
@@ -90,22 +79,19 @@ public class Procesador {
                 new Point3(2,1,6),
                 new Point3(2.5,1.5,5.5));
 
-        p3d3Grande = new MatOfPoint3f(new Point3(10,10,50),
-                new Point3(10,20,50),
-                new Point3(20,20,50),
-                new Point3(20,10,50),
-                new Point3(10,10,60),
-                new Point3(10,20,60),
-                new Point3(20,20,60),
-                new Point3(20,10,60),
-                new Point3(25,15,55));
+        p3d3Grande = new MatOfPoint3f(new Point3(0,0,0),
+                new Point3(0,0.5,0),
+                new Point3(0.5,0.5,0),
+                new Point3(0.5,0,0),
+                new Point3(0,0,-0.5),
+                new Point3(0,0.5,-0.5),
+                new Point3(0.5,0.5,-0.5),
+                new Point3(0.5,0,-0.5)
+                );
 
 
 
         //MATRIZ DE CALIBRACION
-
-        K = new Mat(3,3,CvType.CV_32FC1);
-        K.put(r,c,800,0,320,0,800,240,0,0,1);
 
 
         calibracion = new MatOfDouble(0.0,0.0,0.0,0.0,0.0);
@@ -113,7 +99,11 @@ public class Procesador {
 
     }
 
-
+    /**
+     * Metodo para ordenar las 4 esquinas de la imagen
+     * @param listaContornos Lista con las 4 esquinas desordenadas
+     * @return Las esquinas despues de aplicar el proceso de ordenación
+     */
     public List<Pair<RotatedRect,MatOfPoint>> ordernaEsquinas(List<Pair<RotatedRect,MatOfPoint>> listaContornos){
 
         //Todos los contornos que forman parte de los rotatedrect, cada mat of point es un contorno
@@ -441,10 +431,10 @@ public class Procesador {
      * Metodo procesarImagen. Se encarga de detectar los contornos y de llamar a los metodos para seleccionarlos. Finalmente muestra en pantalla el resultado
      * @param entrada Imagen de entrada.
      * @param modoAlternativo Modo de procesamiento de color.
-     * @param image Textura que deseamos pintar si lo hacemos
+     * @param listImages Imagenes que deseamos pintar, si leemos el patrón correcto
      * @return La imagen procesada
      */
-    public Mat procesarImagen(Mat entrada,boolean modoAlternativo, Mat image) {
+    public Mat procesarImagen(Mat entrada,boolean modoAlternativo, List<Mat> listImages) {
 
 
         //Probar a inicializar en el constructor
@@ -456,6 +446,7 @@ public class Procesador {
         Core.max(lista.get(0),lista.get(1),maximo);
         Core.max(maximo,lista.get(2),maximo); //en lista de 0 tenemos el maximo de los 3 colores GRISES
 
+        //libera espacio de las matrices utilizadas
         for (Mat mm: lista) {
             mm.release();
         }
@@ -548,16 +539,30 @@ public class Procesador {
 
 
 
+                    if(res.equals(" | 0 | 1 | 2 | 3 | ")){
+                        dibujaTextura(entrada,puntosCentrales2f,listImages.get(0));
+                    }
 
-
-
-
-
-                    findPose3(entrada,puntosCentrales2f,image);
 
 
                     if(res.equals(" | 0 | 3 | 2 | 1 | ")){
-                        List<Point> pos = findPose2(puntosCentrales2f,rvec,tvec,res);
+                        dibujaTextura(entrada,puntosCentrales2f,listImages.get(1));
+
+                    }
+
+                    if(res.equals(" | 0 | 1 | 3 | 2 | ")){
+                        dibujaTextura(entrada,puntosCentrales2f,listImages.get(2));
+
+                    }
+
+                    if(res.equals(" | 0 | 1 | 1 | 3 | ")){
+
+                        List<Point> pos = procesaCubo(puntosCentrales2f,rvec,tvec,res);
+                        dibujarCubo(entrada, pos);
+                    }
+
+                    if(res.equals(" | 0 | 3 | 2 | 3 | ")){
+                        List<Point> pos = procesaCubo(puntosCentrales2f,rvec,tvec,res);
                         dibujarCubo(entrada, pos);
                     }
 
@@ -584,7 +589,7 @@ public class Procesador {
     }
 
     private void dibujarCubo(Mat entrada, List<Point> pos) {
-        int [] array = {1,2,3,4,1,5,6,7,8,5,6,2,6,7,3,7,8,4,9,3,7,9,8};
+        int [] array = {1,2,3,4,1,5,6,7,8,5,6,2,6,7,3,7,8,4,3,7,8};
 
         for(int i = 1; i<array.length-1; ++i){
 
@@ -599,7 +604,7 @@ public class Procesador {
 
 
 
-    private void findPose3(Mat entrada, MatOfPoint2f puntosCentrales,  Mat image){
+    private void dibujaTextura(Mat entrada, MatOfPoint2f puntosCentrales, Mat image){
 
 
         int imageWidth = image.width();
@@ -623,14 +628,22 @@ public class Procesador {
         Mat C = Imgproc.getPerspectiveTransform(listaM,puntosCentrales);
 
         //Llamamos a la función warpPerspective con la imagen y la homografia, guardamos resultado en temp
-        //Mat temp = new Mat();
-
-        Imgproc.warpPerspective(image,entrada,C,entrada.size(),Imgproc.INTER_LINEAR,Core.BORDER_TRANSPARENT,new Scalar(255,0,0));
+        Mat temp = entrada.clone();
 
 
-       // temp.copyTo(entrada);
+        Imgproc.warpPerspective(image,temp,C,entrada.size(),Imgproc.INTER_LINEAR,Core.BORDER_TRANSPARENT,new Scalar(0,0,0));
+
+        Mat gris = new Mat(temp.rows(),temp.cols(),CvType.CV_8UC1);
+        Imgproc.cvtColor(temp,gris,Imgproc.COLOR_BGR2GRAY);
 
 
+
+
+        //Core.add(entrada,temp,entrada);
+
+        temp.copyTo(entrada,gris);
+
+        //Imgproc.cvtColor(gris,entrada,Imgproc.COLOR_GRAY2RGB);
 
 
 
@@ -638,7 +651,7 @@ public class Procesador {
 
     }
 
-    private List<Point> findPose2(MatOfPoint2f puntosCentrales,MatOfDouble rvec, MatOfDouble tvec,String patron){
+    private List<Point> procesaCubo(MatOfPoint2f puntosCentrales,MatOfDouble rvec, MatOfDouble tvec,String patron){
 
         CameraProjectionAdapter mCameraProjectionAdapter = new CameraProjectionAdapter();
 
@@ -652,9 +665,9 @@ public class Procesador {
         MatOfPoint2f output = new MatOfPoint2f();
 
 
-        if (patron.equals(" | 0 | 1 | 2 | 3 | "))
+        if (patron.equals(" | 0 | 1 | 1 | 3 | "))
             Calib3d.projectPoints(p3d3,rvec,tvec,projection,calibracion,output);
-        else if (patron.equals(" | 0 | 3 | 2 | 1 | "))
+        else if (patron.equals(" | 0 | 1 | 3 | 2 | ") || patron.equals(" | 0 | 3 | 2 | 3 | "))
             Calib3d.projectPoints(p3d3Grande,rvec,tvec,projection,calibracion,output);
 
         List<Point> listaOut = output.toList();
@@ -743,10 +756,6 @@ public class Procesador {
                                     par3=v;
                                 }
 
-                                /*else{
-                                    Log.println(Log.ERROR,"borramos lista",String.valueOf(listaContornos.size()));
-                                    it.remove();
-                                }*/
 
                   }
 
@@ -772,20 +781,19 @@ public class Procesador {
         //Vector de candidatos
         Vector<RotatedRect> candidatos = new Vector<>();
 
+
         for (int c=0; c<contornos.size();c++){
 
-            boolean anadido = false;
 
-            //Log.println(Log.ERROR,"DEBUG contornos:,String.valueOf(contornos.get(c).size().height));
             double tamanoContorno = contornos.get(c).size().height;
 
-            //test de tamaño entre 12 y º10 pixeles
+            //test de tamaño entre 12 y 10 pixeles
             if((tamanoContorno>=12.0) && (tamanoContorno<=120)){
 
                 //test de area, comprobar area minima
                  double area = Imgproc.contourArea(contornos.get(c));
 
-                if((area>=20.0) && (area<=1100)){
+                if((area>=50.0) && (area<=1100)){
 
                     MatOfPoint2f temp=new MatOfPoint2f();
                     temp.fromList(contornos.get(c).toList());
@@ -806,7 +814,7 @@ public class Procesador {
                         for (int k= 0; k<contornos.get(c).size().height; k+= 3) {
 
                             List<Point> listaPuntos = contornos.get(c).toList();
-                            //Point[] arrayPuntos = contornos.get(c).toArray();
+
                             //Cogemos el punto y lo comparamos con su centro de la elipse
                             Point ptInt = new Point((listaPuntos.get(k).x + elip.center.x) / 2,
                                     (listaPuntos.get(k).y + elip.center.y) / 2);
@@ -845,9 +853,8 @@ public class Procesador {
                                     listaContornos.add(par);
 
 
-                                    anadido= true;
-                                    //Imgproc.drawContours(entrada, contornos, c, new Scalar(255,0,0), 1);
-                                    Log.println(Log.ERROR,"C añadido | total cands",String.valueOf(c) + " | "+ String.valueOf(candidatos.size()));
+
+                                    //Log.println(Log.ERROR,"C añadido | total cands",String.valueOf(c) + " | "+ String.valueOf(candidatos.size()));
 
 
 

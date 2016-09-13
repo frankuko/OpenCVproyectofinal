@@ -24,6 +24,9 @@ import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class CameraActivity extends Activity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
     private static final String TAG = "OPENCV CAMERA PROYECTO";
@@ -35,6 +38,8 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
     Mat _mRgba;
     Mat salida;
 
+
+    List<Mat> listaImagenes;
     Mat imagen;
 
     private int cam_anchura = 800; // 960 x 720
@@ -219,10 +224,27 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
 
         _mRgba = new Mat(cam_altura,cam_anchura, CvType.CV_8UC4);
         salida = new Mat(cam_altura,cam_anchura, CvType.CV_8UC4);
+        listaImagenes = new ArrayList<>();
 
         //Cargamos imagen
         try{
+
             imagen = Utils.loadResource(this, R.drawable.cardboard, Imgcodecs.CV_LOAD_IMAGE_COLOR);
+            Imgproc.cvtColor(imagen,imagen,Imgproc.COLOR_BGR2RGBA);
+
+            listaImagenes.add(imagen);
+
+            imagen = Utils.loadResource(this, R.drawable.esculturamadera, Imgcodecs.CV_LOAD_IMAGE_COLOR);
+
+            Imgproc.cvtColor(imagen,imagen,Imgproc.COLOR_BGR2RGBA);
+
+            listaImagenes.add(imagen);
+
+            imagen = Utils.loadResource(this, R.drawable.mona, Imgcodecs.CV_LOAD_IMAGE_COLOR);
+
+            Imgproc.cvtColor(imagen,imagen,Imgproc.COLOR_BGR2RGBA);
+
+            listaImagenes.add(imagen);
         }catch (java.io.IOException e){
             Log.e("Excepción con fichero", "No se pudo cargar el fichero de la imagen");
         }
@@ -266,7 +288,7 @@ public class CameraActivity extends Activity implements CameraBridgeViewBase.CvC
 
         if(processor!=null){
 
-            Mat intermedio = processor.procesarImagen(_mRgba,modoAlternativo,imagen);
+            Mat intermedio = processor.procesarImagen(_mRgba,modoAlternativo,listaImagenes);
             Imgproc.remap(intermedio, salida, processor.getMapaX(), processor.getMapaY(),
                     Imgproc.INTER_CUBIC, Core.BORDER_TRANSPARENT, s);
 
